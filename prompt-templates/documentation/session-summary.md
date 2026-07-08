@@ -2,14 +2,22 @@
 
 当前阶段：{{CURRENT_PHASE}}
 
-## 本次会话发生了什么
-{{SESSION_SUMMARY}}
+## 回顾
 
-## 做出的决策
-{{DECISIONS}}
+{{REVIEW}}
 
-## 未决问题
-{{OPEN_QUESTIONS}}
+## 目标对齐
 
-## 下一步
-{{NEXT_STEP}}
+{{ALIGNMENT}}
+
+## 回答质量评估
+
+{{EVALUATION}}
+
+## 交接摘要
+
+{{HANDOFF}}
+
+## 归档状态
+
+{{ARCHIVE_STATUS}}

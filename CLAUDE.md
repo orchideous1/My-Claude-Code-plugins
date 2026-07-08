@@ -16,7 +16,7 @@
 | `/read [目标]` | 代码阅读 / 故障排查 | `systematic-reading` |
 | `/build [目标]` | 代码生成 / 重构 / 修改 | `structured-building` |
 | `/arch [焦点]` | 复杂项目架构理解 | `architecture-understanding` |
-| `/summarize` | 会话收尾 / 文档整理 | `documentation` |
+| `/summarize` | 会话收尾 / 目标对齐 / 归档触发 | `documentation` |
 
 命令是薄壳入口，所有流程细节、门控、模板引用收敛到对应 skill 中。会话开始时自动加载 `using-workflows` 技能，强制先检查工作流技能再行动。
 
@@ -94,7 +94,7 @@
 2. 每个 `/build` 任务必须维护 `.claude/state/plan.md`。
 3. 长期目标维护在 `.claude/state/goal-tracker.md`。
 4. `/arch` 产物写入 `.claude/state/architecture.md`。
-5. 会话结束时使用 `/summarize` 归档。
+5. 会话结束时使用 `/summarize` 进行回顾、目标对齐与回答质量评估，用户确认后由 hook 执行归档。
 6. 实现完成后向用户汇报，并在代码开头写 docstring。
 
 ---
@@ -110,7 +110,7 @@
 - `/read`：REPORT → FIX 必须获得用户批准
 - `/build`：PLANNING → EXECUTING 必须获得用户批准
 - `/arch`：MODEL 后必须自审，有缺口则回退
-- `/summarize`：归档前必须检查状态一致性
+- `/summarize`：展示回顾与评估结果 → 获得用户确认 → 调用归档 hook；用户不确认则不归档
 
 ### 状态文件保护
 
@@ -119,9 +119,19 @@
 - 在每次 Write/Edit 后检查 YAML frontmatter 是否完整
 - 如 frontmatter 被破坏，阻断操作并提示恢复模板
 
----
+### 归档 hooks
 
-## 命令与技能的分工
+`documentation` 技能对应的归档操作由以下 hooks 执行，`/summarize` 本身不直接搬运文件：
+
+- `pre-summarize.sh`：在 `/summarize` 执行前检查 `session.md` / `goal-tracker.md` 的 YAML frontmatter 完整性，异常时阻断。
+- `archive.sh`：在用户确认回顾内容后执行归档。负责：
+  - 按 `<时间戳>-<简短描述>.md` 命名归档文件
+  - 校验命名规范
+  - 迁移 `architecture.md` 等产物到归档目录
+  - 将 `session.md` 内容移入归档文件并重置为初始状态
+- `session-exit.sh`：会话退出前检测未归档的 dirty 状态，提示用户是否需要 `/summarize`。
+
+这些 hooks 存放在本项目的 `hooks/documentation/` 目录下，使用时需在 Claude Code 配置中按需挂载。
 
 为避免上下文冗余，本系统采用以下分工：
 

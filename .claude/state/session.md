@@ -1,21 +1,35 @@
 ---
 current_phase: REFLECTING
-task: 改写 architecture-understanding 技能说明
-started: 2026-07-06
-updated: 2026-07-06
+task: 重构 documentation 技能为会话收尾与对齐技能
+started: 2026-07-07
+updated: 2026-07-07
+context:
+  plan_approved: true
+  verification_result: passed
+  reflection: 已完成所有计划改动并通过验证
 ---
 
 # 当前会话
 
 ## 已完成
 
-- 对比 `examples/arch/slime概述.md`（人类手写）与 `examples/arch/architecture.md`（技能生成），识别可读性差距。
-- 改写 `skills/architecture-understanding/SKILL.md`，将产物定位为“工程师带读式 walkthrough”。
-- 重写 `prompt-templates/architecture/model.md`，规定 walkthrough 风格、代码片段、作者点评、具体示例。
-- 更新 `prompt-templates/architecture/drill.md`、`connect.md`、`scope.md`、`survey.md`，在渐进式批量原则下收集 walkthrough 所需素材。
-- 创建 `.claude/state/plan.md` 记录改动清单。
-- 同步更新 `/home/linyiwu/.claude/skills/architecture-understanding/SKILL.md` 及对应 prompt-templates，确保运行时技能使用最新描述。
+- 重写 `skills/documentation/SKILL.md`，定义 REVIEW/ALIGN/EVALUATE/PACKAGE/ARCHIVE_TRIGGER 五个阶段。
+- 新增 4 个提示模板：`review.md`、`align.md`、`evaluate.md`、`package.md`。
+- 更新 `prompt-templates/documentation/session-summary.md`。
+- 创建 `hooks/documentation/` 目录及 3 个 hook 脚本：`pre-summarize.sh`、`archive.sh`、`session-exit.sh`，并设置可执行权限。
+- 更新 `CLAUDE.md` 中的 `/summarize` 描述、门控与 hooks 说明。
+- 创建 `.claude/state/goal-tracker.md`。
+- 通过语法检查、frontmatter 检查、dry-run 归档、hook 运行验证。
+
+## 变更总结
+
+将 `/summarize` 从文件归档工具升级为会话收尾与目标对齐技能：
+
+- `/summarize` 现在负责 REVIEW（回顾）、ALIGN（目标对齐）、EVALUATE（回答质量评估）、PACKAGE（打包交接摘要）。
+- 归档操作下沉到 hooks，在用户确认后触发。
+- hooks 负责 frontmatter 检查、命名规范校验、`architecture.md` 内容迁移、会话退出提醒。
 
 ## 下一步建议
 
-- 在 slime 框架上重新执行 `/arch`，验证新技能说明产出的 `architecture.md` 是否更接近人类手写风格。
+- 如需挂载 hooks，请在 Claude Code 配置中将对应脚本注册为 `PostToolUse` 或会话退出 hook。
+- 可在实际会话中运行 `/summarize` 验证新流程是否顺畅。
