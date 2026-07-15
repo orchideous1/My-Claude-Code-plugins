@@ -10,8 +10,11 @@
 #   --json      - 以 JSON 格式输出，便于 Claude Code hook 解析
 #   STATE_DIR   - 状态文件目录，默认为 .claude/state
 #
+# 环境变量：
+#   CLAUDE_SESSION_ID - 会话标识，未设置时默认为 "default"
+#
 # 行为：
-#   如果 session.md 包含本次会话的具体内容（不只是初始模板），
+#   如果当前会话的 session.md 包含本次会话的具体内容（不只是初始模板），
 #   则打印提醒，建议用户运行 /summarize 进行归档。
 #
 # 退出码：
@@ -22,6 +25,7 @@ set -euo pipefail
 
 JSON_OUTPUT=false
 STATE_DIR=".claude/state"
+SESSION_ID="${CLAUDE_SESSION_ID:-default}"
 
 # 解析参数
 for arg in "$@"; do
@@ -35,7 +39,7 @@ for arg in "$@"; do
     esac
 done
 
-SESSION_FILE="$STATE_DIR/session.md"
+SESSION_FILE="$STATE_DIR/sessions/$SESSION_ID/session.md"
 
 if [[ ! -f "$SESSION_FILE" ]]; then
     exit 0

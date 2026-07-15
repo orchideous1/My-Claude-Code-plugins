@@ -90,11 +90,11 @@
 
 ## 文档整理与用户交互
 
-1. 每个工作流阶段结束后更新 `.claude/state/session.md`。
-2. 每个 `/build` 任务必须维护 `.claude/state/plan.md`。
+1. 每个工作流阶段结束后更新 `.claude/state/sessions/<id>/session.md`。
+2. 每个 `/build` 任务必须维护 `.claude/state/sessions/<id>/plan.md`。
 3. 长期目标维护在 `.claude/state/goal-tracker.md`。
-4. `/arch` 产物写入 `.claude/state/architecture.md`。
-5. 会话结束时使用 `/summarize` 进行回顾、目标对齐与回答质量评估，用户确认后由 hook 执行归档。
+4. `/arch` 产物写入 `.claude/state/sessions/<id>/architecture.md`。
+5. 会话结束时使用 `/summarize` 进行回顾、目标对齐、回答质量评估与归档审查，用户确认后由 hook 执行归档。
 6. 实现完成后向用户汇报，并在代码开头写 docstring。
 
 ---
@@ -110,26 +110,30 @@
 - `/read`：REPORT → FIX 必须获得用户批准
 - `/build`：PLANNING → EXECUTING 必须获得用户批准
 - `/arch`：MODEL 后必须自审，有缺口则回退
-- `/summarize`：展示回顾与评估结果 → 获得用户确认 → 调用归档 hook；用户不确认则不归档
+- `/summarize`：PACKAGE → AUDIT → 展示审查结果与归档方案 → 获得用户确认 → 调用归档 hook；用户不确认则不归档
 
-### 状态文件保护
-
-`.claude/state/*.md` 文件由 `PostToolUse` hook `protect-state.sh` 保护：
-
-- 在每次 Write/Edit 后检查 YAML frontmatter 是否完整
-- 如 frontmatter 被破坏，阻断操作并提示恢复模板
 
 ### 归档 hooks
 
 `documentation` 技能对应的归档操作由以下 hooks 执行，`/summarize` 本身不直接搬运文件：
 
-- `pre-summarize.sh`：在 `/summarize` 执行前检查 `session.md` / `goal-tracker.md` 的 YAML frontmatter 完整性，异常时阻断。
-- `archive.sh`：在用户确认回顾内容后执行归档。负责：
-  - 按 `<时间戳>-<简短描述>.md` 命名归档文件
+- `pre-summarize.sh`：在 `/summarize` 执行前检查：
+  - `sessions/<id>/session.md` 与 `goal-tracker.md` 的 YAML frontmatter 完整性
+  - 旧路径 `.claude/session.md` 是否存在并提示迁移
+  - 是否存在其他 dirty 会话状态并提示并发冲突
+  - 异常时阻断
+- `archive.sh`：在用户确认回顾与审查内容后执行归档。负责：
+  - 读取 `CLAUDE_SESSION_ID` 定位会话目录 `.claude/state/sessions/<id>/`
+  - 推断 workflow 类型（build / read / arch / general）
+  - 按类型迁移总结产物到归档目录：
+    - build：`handoff.md` → `<timestamp>-<desc>-build-handoff.md`
+    - read：`handoff.md` → `<timestamp>-<desc>-read-report.md`
+    - arch：`architecture.md` → `<timestamp>-<desc>-arch-model.md`
+    - general：`handoff.md` → `<timestamp>-<desc>-general-summary.md`
   - 校验命名规范
-  - 迁移 `architecture.md` 等产物到归档目录
-  - 将 `session.md` 内容移入归档文件并重置为初始状态
-- `session-exit.sh`：会话退出前检测未归档的 dirty 状态，提示用户是否需要 `/summarize`。
+  - 更新 `.claude/state/archive/index.md`
+  - **不归档 `session.md` 与 `plan.md`**，仅重置 `session.md`
+- `session-exit.sh`：会话退出前检测当前会话未归档的 dirty 状态，提示用户是否需要 `/summarize`。
 
 这些 hooks 存放在本项目的 `hooks/documentation/` 目录下，使用时需在 Claude Code 配置中按需挂载。
 
@@ -146,9 +150,61 @@
 ## 状态文件管理
 
 1. 状态文件统一存放在当前 workspace 的 `.claude/state/` 目录。
-2. 所有状态文件使用 YAML frontmatter + Markdown body 格式。
-3. 不得破坏状态文件的 YAML frontmatter。
-4. 旧的 `session.md` 完成后归档到 `.claude/state/archive/`。
+2. 中间状态按会话隔离，存放在 `.claude/state/sessions/<CLAU_DE_SESSION_ID>/`。
+3. 长期记忆文件（`goal-tracker.md`、`archive/index.md`）存放在 `.claude/state/` 根目录。
+4. 所有状态文件使用 YAML frontmatter + Markdown body 格式。
+5. 不得破坏状态文件的 YAML frontmatter。
+6. 归档产物存放在 `.claude/state/archive/`，按工作流类型命名。
+
+---
+
+## 状态架构与归档规则
+
+### 三层内容模型
+
+| 类型 | 位置 | 代表文件 | 说明 |
+|------|------|----------|------|
+| 中间状态 | `.claude/state/sessions/<id>/` | `session.md`、`plan.md`、待归档的 `handoff.md` / `architecture.md` | 单会话工作草稿，会话结束后重置 |
+| 归档产物 | `.claude/state/archive/` | `<timestamp>-<desc>-<type>-<artifact>.md` | 经审查的会话总结，只读快照 |
+| 长期记忆 | `.claude/state/` 根目录 + `CLAUDE.md` | `goal-tracker.md`、`archive/index.md`、`CLAUDE.md` | 跨会话共享，协作规则与目标 |
+
+### 归档索引
+
+`.claude/state/archive/index.md` 由 `archive.sh` 自动维护，记录所有已归档的会话总结。新会话开始时应优先读取本文件以了解历史进展与关键 handoff。
+
+### 工作流感知的归档命名
+
+| workflow | 来源文件 | 归档文件名 |
+|----------|----------|------------|
+| build | `sessions/<id>/handoff.md` | `<timestamp>-<desc>-build-handoff.md` |
+| read | `sessions/<id>/handoff.md` | `<timestamp>-<desc>-read-report.md` |
+| arch | `sessions/<id>/architecture.md` | `<timestamp>-<desc>-arch-model.md` |
+| general | `sessions/<id>/handoff.md` | `<timestamp>-<desc>-general-summary.md` |
+
+### 归档审查
+
+每次 `/summarize` 触发归档前，必须经过 AUDIT 阶段审查：
+
+- 提示词合理性（能否归纳通用提示）
+- 文档冲突（`CLAUDE.md`、skill、命令、模板之间是否一致）
+- 状态架构（文件位置、frontmatter、分层边界）
+- `CLAUDE.md` 优化（仅输出建议，**不得自动写入**）
+- 归档内容审查（总结是否准确、命名是否符合规则）
+
+### CLAUDE.md 变更受控
+
+`CLAUDE.md` 是项目级协作规则的核心载体，**所有内容增改必须经用户审核**。AUDIT 阶段可提出优化建议，但绝不能自动写入。审核通过后，应通过 `/build` 流程执行修改。
+
+### 并发会话隔离
+
+- 通过环境变量 `CLAUDE_SESSION_ID` 隔离不同会话的中间状态。
+- 未设置时默认使用 `default`。
+- 推荐并发会话启动方式：`CLAUDE_SESSION_ID=feature-a claude`
+- 若未设置 ID 且存在其他会话目录，`pre-summarize.sh` 会发出警告。
+
+### 旧路径处理
+
+旧路径 `.claude/session.md` 已不再使用。如发现该文件，应手动迁移到 `.claude/state/sessions/default/session.md` 或删除，以避免冗余。
 
 ---
 
