@@ -1,5 +1,5 @@
 ---
-name: architecture-understanding
+name: arch
 description: 当用户需要理解复杂项目、模块或数据流架构时触发
 ---
 
@@ -17,6 +17,21 @@ description: 当用户需要理解复杂项目、模块或数据流架构时触�
 - 需要理解大型系统如何组合
 - 准备重构或扩展复杂模块
 - 为他人记录架构
+
+## 启动前必须执行
+
+在 SCOPE 阶段开始读写状态前：
+
+1. 如果环境变量 `CLAUDE_SESSION_ID` 未设置，根据架构焦点生成会话 ID：
+   ```bash
+   SESSION_ID=$(~/.claude/scripts/core/derive-session-id.sh "{{ARCHITECTURE_FOCUS}}")
+   ```
+2. 调用 `ensure-state.sh` 初始化状态：
+   ```bash
+   ~/.claude/scripts/core/ensure-state.sh arch .claude/state "${SESSION_ID:-${CLAUDE_SESSION_ID:-default}}"
+   ```
+
+该脚本会创建 `.claude/state/sessions/<id>/` 并确保 `session.md` 与 `architecture.md` 的 frontmatter 完整，同时将会话 ID 持久化到 `.claude/state/.current-session-id`。
 
 ## 工作流循环
 
@@ -88,7 +103,7 @@ description: 当用户需要理解复杂项目、模块或数据流架构时触�
 
 ### 阶段 5：MODEL（建模）
 
-综合为架构模型，输出到 `.claude/state/architecture.md`。
+综合为架构模型，输出到 `.claude/state/sessions/<id>/architecture.md`。
 
 产物定位：一篇“资深工程师带新人读代码”的 walkthrough，而非冷冰冰的 API 参考。
 
@@ -98,7 +113,7 @@ description: 当用户需要理解复杂项目、模块或数据流架构时触�
 2. **鸟瞰结构** — 目录/模块边界、入口点、关键文件，用 Mermaid 或文本图呈现。
 3. **核心组件逐一解读** — 只选最重要的 5-8 个抽象，每个包含：
    - 一句话职责；
-   - 关键代码片段（放在 `<details>` 可折叠块中，保留核心逻辑）；
+   - 关键代码片段（放在 `<details>` 可折叠块中，保留核心逻辑）
    - 1-3 行“这段代码在做什么”的点评；
    - 首次出现时附带 GitHub 永久链接。
 4. **数据流与控制流** — 用具体步骤 + 序列图/文字追踪，必要时给出一个带具体参数的运行示例。
@@ -120,20 +135,20 @@ description: 当用户需要理解复杂项目、模块或数据流架构时触�
 - 如有缺口 → 回到 DRILL
 - 如关系不清 → 回到 CONNECT
 - 如范围错误 → 回到 SCOPE
-- 如模型稳固且可读 → 标记 DONE 并归档
+- 如模型稳固且可读 → 标记 DONE
 
 使用提示模板：`~/.claude/prompt-templates/architecture/model.md`
 
 ## 状态更新
 
-更新 `.claude/state/session.md`：
+更新 `.claude/state/sessions/<id>/session.md`：
 - `current_phase`: SCOPE | SURVEY | DRILL | CONNECT | MODEL
 - `context.architecture_focus`
 - `context.components`
 - `context.relationships`
 - `context.open_questions`
 
-用 `.claude/state/architecture.md` 维护运行中的架构模型。
+用 `.claude/state/sessions/<id>/architecture.md` 维护运行中的架构模型。
 
 ## 危险信号
 
@@ -143,3 +158,4 @@ description: 当用户需要理解复杂项目、模块或数据流架构时触�
 - 跳过“开放问题”部分
 - 最终产物写成中性参考手册，没有观点、代码片段和具体例子
 - 只有概念描述，没有落地到代码行号或代码片段
+- 不先调用 `ensure-state.sh`

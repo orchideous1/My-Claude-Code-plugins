@@ -4,7 +4,7 @@
 # session-exit.sh - 会话退出前检查是否有未归档的 dirty 状态。
 #
 # 用法：
-#   hooks/documentation/session-exit.sh [--json] [STATE_DIR]
+#   hooks/summarize/session-exit.sh [--json] [STATE_DIR]
 #
 # 参数：
 #   --json      - 以 JSON 格式输出，便于 Claude Code hook 解析

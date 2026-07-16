@@ -13,22 +13,25 @@ description: 在每次会话开始时加载，强制先检查工作流技能
 
 | 场景 | 调用技能 |
 |------|----------|
-| 排查 bug、理解代码、调查异常 | `systematic-reading` |
-| 生成代码、重构、修改行为 | `structured-building` |
-| 理解项目/模块/数据流架构 | `architecture-understanding` |
-| 收尾会话、更新文档、归档 | `documentation` |
+| 排查 bug、理解代码、调查异常 | `read` |
+| 生成代码、重构、修改行为 | `build` |
+| 理解项目/模块/数据流架构 | `arch` |
+| 收尾会话、更新文档、归档 | `summarize` |
 
-## 命令入口
+## 入口说明
 
-用户可以通过以下命令触发工作流：
+本系统不再维护独立的 `/read`、`/build`、`/arch`、`/summarize` 命令入口。工作流通过任务场景自动触发对应 skill：
 
-- `/read [目标]`
-- `/build [目标]`
-- `/arch [焦点]`
-- `/summarize`
+- 用户表达「排查、定位 bug、理解代码行为」等意图时，触发 `read`。
+- 用户表达「写代码、重构、修改、实现」等意图时，触发 `build`。
+- 用户表达「理解架构、梳理结构、建模」等意图时，触发 `arch`。
+- 用户表达「 summarize、收尾、归档」或当前目标已完成时，触发 `summarize`。
+
+每个 skill 启动后会首先调用 `~/.claude/scripts/core/ensure-state.sh <workflow>` 初始化状态目录，随后按阶段推进。
 
 ## 禁止事项
 
 - 不检查技能就直接开始复杂任务
-- 用普通对话绕过 `/read`、`/build`、`/arch`
-- 在命令中重复 skill 已经定义的工作流细节
+- 用普通对话绕过 `read`、`build`、`arch`
+- 在 skill 中重复定义工作流细节（流程、门控、模板路径）
+- 跳过 `ensure-state.sh` 直接读写状态文件

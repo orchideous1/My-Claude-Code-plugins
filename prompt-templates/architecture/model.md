@@ -1,6 +1,16 @@
-# 架构阶段 5：MODEL（建模）
+# 工作流定位
 
-将理解综合到 `.claude/state/architecture.md`。
+本阶段属于 `arch` 工作流的 **MODEL**。CONNECT 已明确关系；本阶段将理解综合为架构模型，写入 `.claude/state/sessions/<id>/architecture.md`。
+
+**离开本阶段的验收标准**：
+- `architecture.md` 已按 required 章节完成；
+- 模型像“资深工程师带新人读代码”的 walkthrough，而非中性 API 参考；
+- 开放问题、可读性已自检；
+- 如稳固 → 标记 DONE；如有缺口 → 返回 DRILL，关系不清 → 返回 CONNECT，范围错误 → 返回 SCOPE。
+
+## 输出格式与操作
+
+将理解综合到 `.claude/state/sessions/<id>/architecture.md`。
 
 产物定位：一篇“资深工程师带新人读代码”的架构 walkthrough，而不是中性的 API 参考手册。
 
@@ -52,6 +62,6 @@
 - 是否像 walkthrough 而非参考手册？如不像，重写开篇和组件解读章节
 - 如稳固且可读 → 标记 DONE
 
-更新 `.claude/state/session.md`：
+更新 `.claude/state/sessions/<id>/session.md`：
 - `current_phase`: MODEL
 - `context.open_questions`

@@ -1,5 +1,5 @@
 ---
-name: structured-building
+name: build
 description: 当用户需要生成新代码、重构或修改行为时触发
 ---
 
@@ -12,9 +12,24 @@ description: 当用户需要生成新代码、重构或修改行为时触发
 ## 何时使用
 
 - 新功能
-- Bug 修复（在 `/read` 产出已批准的修复计划后）
+- Bug 修复（在 `read` 产出已批准的修复计划后）
 - 重构
 - 行为变更
+
+## 启动前必须执行
+
+在 UNDERSTANDING 阶段开始读写状态前：
+
+1. 如果环境变量 `CLAUDE_SESSION_ID` 未设置，根据用户目标生成会话 ID：
+   ```bash
+   SESSION_ID=$(~/.claude/scripts/core/derive-session-id.sh "{{USER_GOAL}}")
+   ```
+2. 调用 `ensure-state.sh` 初始化状态：
+   ```bash
+   ~/.claude/scripts/core/ensure-state.sh build .claude/state "${SESSION_ID:-${CLAUDE_SESSION_ID:-default}}"
+   ```
+
+该脚本会创建 `.claude/state/sessions/<id>/` 并确保 `session.md` 与 `plan.md` 的 frontmatter 完整，同时将会话 ID 持久化到 `.claude/state/.current-session-id`。
 
 ## 工作流
 
@@ -48,7 +63,7 @@ description: 当用户需要生成新代码、重构或修改行为时触发
 
 **→ PLANNING → EXECUTING 门控（最关键）**：
 - 必须获得用户明确批准
-- `.claude/state/session.md` 中 `context.plan_approved` 必须设为 `true`
+- `.claude/state/sessions/<id>/session.md` 中 `context.plan_approved` 必须设为 `true`
 - 在批准前，hook 会拦截所有生产代码的 Write/Edit
 
 使用提示模板：`~/.claude/prompt-templates/building/planning.md`
@@ -65,7 +80,7 @@ description: 当用户需要生成新代码、重构或修改行为时触发
 - 脚本开头写用法 docstring
 
 **→ EXECUTING → VERIFYING 门控**：
-- 检查修改的文件是否超出 `plan.md` 中的文件清单
+- 检查修改的文件是否超出 `.claude/state/sessions/<id>/plan.md` 中的文件清单
 - 如发现计划外文件，返回 PLANNING 补充或删除多余修改
 
 使用提示模板：`~/.claude/prompt-templates/building/executing.md`
@@ -98,7 +113,7 @@ description: 当用户需要生成新代码、重构或修改行为时触发
 
 ## 状态更新
 
-在 `.claude/state/session.md` 中跟踪进度：
+在 `.claude/state/sessions/<id>/session.md` 中跟踪进度：
 - `current_phase`: UNDERSTANDING | PLANNING | EXECUTING | VERIFYING | REFLECTING
 - `context.user_goal`
 - `context.plan`
@@ -107,9 +122,12 @@ description: 当用户需要生成新代码、重构或修改行为时触发
 - `context.verification_result`
 - `context.reflection`
 
+计划在 `.claude/state/sessions/<id>/plan.md` 中维护。
+
 ## 危险信号
 
 - 计划未批准就写代码
 - 添加计划外功能
 - 跳过验证
 - 不更新状态文件
+- 不先调用 `ensure-state.sh`

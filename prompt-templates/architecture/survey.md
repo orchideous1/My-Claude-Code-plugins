@@ -1,4 +1,13 @@
-# 架构阶段 2：SURVEY（概览）
+# 工作流定位
+
+本阶段属于 `arch` 工作流的 **SURVEY**。SCOPE 已定义焦点；本阶段在不读内部的情况下映射高层结构。
+
+**离开本阶段的验收标准**：
+- 已获得高层地图（目录、模块、入口点、关键配置、测试结构）；
+- 已确定 3-5 个最值得深入解读的核心组件；
+- 高层地图已写入 `.claude/state/sessions/<id>/session.md` 的 `context.high_level_map`。
+
+## 输出格式与操作
 
 映射焦点区域的高层结构。
 
@@ -17,6 +26,6 @@
 
 大型项目使用子代理，每个模块一个。
 
-更新 `.claude/state/session.md`：
+更新 `.claude/state/sessions/<id>/session.md`：
 - `current_phase`: SURVEY
 - `context.high_level_map`

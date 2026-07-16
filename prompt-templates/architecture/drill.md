@@ -1,4 +1,12 @@
-# 架构阶段 3：DRILL（深入）
+# 工作流定位
+
+本阶段属于 `arch` 工作流的 **DRILL**。SURVEY 已获得高层地图；本阶段挑选核心组件深入理解。
+
+**离开本阶段的验收标准**：
+- 每个关键组件都有单一职责、公开接口、关键内部、依赖、被依赖、生命周期、设计亮点的说明；
+- 组件分析已写入 `.claude/state/sessions/<id>/session.md` 的 `context.components`。
+
+## 输出格式与操作
 
 挑选最重要的组件深入理解。
 
@@ -17,6 +25,6 @@
 
 每个组件使用一个 `Explore` 子代理。子代理只报告事实，不生成主观评价；主观评价由主代理在 MODEL 阶段统一撰写。
 
-更新 `.claude/state/session.md`：
+更新 `.claude/state/sessions/<id>/session.md`：
 - `current_phase`: DRILL
 - `context.components`

@@ -5,7 +5,7 @@
 #                    旧路径冗余与并发会话冲突。
 #
 # 用法：
-#   hooks/documentation/pre-summarize.sh [STATE_DIR]
+#   hooks/summarize/pre-summarize.sh [STATE_DIR]
 #
 # 参数：
 #   STATE_DIR - 状态文件目录，默认为 .claude/state
@@ -20,6 +20,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPTS_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)/scripts/core"
+
 STATE_DIR="${1:-.claude/state}"
 SESSION_ID="${CLAUDE_SESSION_ID:-default}"
 SESSION_FILE="$STATE_DIR/sessions/$SESSION_ID/session.md"
@@ -33,29 +36,10 @@ if [[ ! -f "$GOAL_FILE" ]]; then
     exit 1
 fi
 
-# 检查当前会话的 session.md 是否存在
-if [[ ! -f "$SESSION_FILE" ]]; then
-    # 若不存在，尝试从旧路径迁移或创建初始模板
-    if [[ -f "$OLD_SESSION_FILE" ]]; then
-        echo "警告：发现旧路径 $OLD_SESSION_FILE，建议将其迁移到 $SESSION_FILE 或删除。" >&2
-    fi
-    echo "提示：当前会话目录不存在，将创建：$SESSION_FILE" >&2
-    mkdir -p "$(dirname "$SESSION_FILE")"
-    cat > "$SESSION_FILE" <<'EOF'
----
-current_phase: IDLE
-task:
-started:
-updated:
----
-
-# 当前会话
-
-## 已完成
-
-## 下一步建议
-
-EOF
+# 使用 ensure-state.sh 初始化/补全当前会话状态（抑制 stdout）
+if ! "$SCRIPTS_DIR/ensure-state.sh" general "$STATE_DIR" "$SESSION_ID" > /dev/null; then
+    echo "错误：无法初始化当前会话状态" >&2
+    exit 1
 fi
 
 # 检查 YAML frontmatter 是否完整
@@ -63,20 +47,11 @@ fi
 check_frontmatter() {
     local file="$1"
     local required_field="$2"
-    local content
-    content=$(cat "$file")
-
-    if ! echo "$content" | grep -q '^---$'; then
-        echo "错误：$file 缺少 YAML frontmatter" >&2
-        return 1
-    fi
-
-    # 提取第一个 frontmatter 块（--- 到下一个 --- 之间）
     local frontmatter
-    frontmatter=$(echo "$content" | awk '/^---$/{if(++count<=2) p=!p; next} p')
+    frontmatter=$(awk '/^---$/{if(++count<=2) p=!p; next} p' "$file")
 
     if [[ -z "$frontmatter" ]]; then
-        echo "错误：$file 的 frontmatter 为空" >&2
+        echo "错误：$file 缺少或 frontmatter 为空" >&2
         return 1
     fi
 
