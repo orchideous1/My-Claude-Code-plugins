@@ -83,8 +83,8 @@ fi
 cp "$SOURCE_FILE" "$ARCHIVE_FILE"
 echo "已归档 guide：$ARCHIVE_FILE"
 
-# 提取摘要
-SUMMARY=$(sed -n '/^# /,$p' "$SOURCE_FILE" | tail -n +2 | grep -v '^\s*$' | head -n 1)
+# 提取摘要（单进程 awk，避免 grep|head 触发 SIGPIPE 被 pipefail 捕获）
+SUMMARY=$(awk '/^# /{p=1; next} p && NF {print; exit}' "$SOURCE_FILE")
 [[ -z "$SUMMARY" ]] && SUMMARY="无摘要"
 
 # 更新 archive/index.md
