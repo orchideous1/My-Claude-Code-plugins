@@ -121,11 +121,11 @@
 可固化的状态操作收敛到 `scripts/core/*.sh`，各 skill 在启动和收尾时直接调用：
 
 - `derive-session-id.sh <PHRASE>`：从用户目标/焦点短语生成短会话 ID slug（≤30 字符，保留中文与 ASCII）。
-- `ensure-state.sh [workflow] [STATE_DIR] [SESSION_ID]`：初始化/校验 `.claude/state/sessions/<id>/` 及 `session.md`、`plan.md`、`architecture.md`、`handoff.md`；最终会话 ID 会持久化到 `.claude/state/.current-session-id`。
-- `infer-workflow.sh [<SESSION_FILE>]`：从 `session.md` 推断 workflow 类型；未提供文件时根据持久化会话 ID 构造路径。
+- `ensure-state.sh [workflow] [STATE_DIR] [SESSION_ID]`：初始化/校验 `.claude/state/sessions/<id>/` 及 `session.md`、`plan.md`、`architecture.md`、`handoff.md`。SESSION_ID 由调用方显式传入或取自 `CLAUDE_SESSION_ID` 环境变量，不再落盘到共享文件。
+- `infer-workflow.sh [<SESSION_FILE>]`：从 `session.md` 推断 workflow 类型；未提供文件时根据 `CLAUDE_SESSION_ID`（或 `default`）构造路径。
 - `reset-session.sh [<SESSION_FILE>]`：将 `session.md` 重置为 IDLE 模板。
 - `write-archive.sh <SOURCE_FILE> <DESCRIPTION> [WORKFLOW_TYPE] [STATE_DIR]`：将已确认的 guide 复制到 `archive/`，按类型命名并更新 `archive/index.md`。
-- `cleanup-session.sh [STATE_DIR] [SESSION_ID]`：归档后删除原 `sessions/<id>/` 目录并清理 `.current-session-id`。
+- `cleanup-session.sh [STATE_DIR] [SESSION_ID]`：归档后删除原 `sessions/<id>/` 目录。SESSION_ID 由调用方显式传入；`hooks/summarize/archive.sh` 会从 `SOURCE_FILE` 路径推断并显式传递。
 
 ### 归档 hooks
 

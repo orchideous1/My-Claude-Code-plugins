@@ -22,8 +22,8 @@ description: 当会话结束、切换任务或需要总结归档时触发
 
 `summarize` **不创建新的会话 ID**，而是沿用当前 workflow 的会话目录：
 
-1. 读取 `.claude/state/.current-session-id` 或 `CLAUDE_SESSION_ID` 环境变量。
-2. 如果没有任何会话 ID 且不存在 dirty 的 `sessions/default/`，则按 `general` workflow 处理。
+1. 复用主代理上下文中由 build/read/arch 启动时派生的 SESSION_ID；若上下文丢失，从最近一次修改的 `.claude/state/sessions/*/session.md` 的 `context.session_id` 字段读取。
+2. 如果上下文与文件系统都没有可用 ID，回退到 `CLAUDE_SESSION_ID` 环境变量或 `default`；若 `sessions/default/` 不存在或非 dirty，按 `general` workflow 处理。
 3. 调用：
    ```bash
    ~/.claude/scripts/core/ensure-state.sh general .claude/state "${SESSION_ID:-${CLAUDE_SESSION_ID:-default}}"

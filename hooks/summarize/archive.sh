@@ -15,6 +15,7 @@
 # 说明：
 #   本 hook 仅为入口，实际归档逻辑委托给 scripts/core/write-archive.sh，
 #   归档成功后调用 scripts/core/cleanup-session.sh 删除原会话目录。
+#   会话 ID 从 SOURCE_FILE 路径推断（假定其位于 sessions/<id>/ 下）。
 #
 
 set -euo pipefail
@@ -34,4 +35,12 @@ if [[ -z "$SOURCE_FILE" ]] || [[ -z "$DESCRIPTION" ]]; then
 fi
 
 "$SCRIPTS_DIR/write-archive.sh" "$SOURCE_FILE" "$DESCRIPTION" "$WORKFLOW_TYPE" "$STATE_DIR"
-"$SCRIPTS_DIR/cleanup-session.sh" "$STATE_DIR"
+
+# 从 SOURCE_FILE 推断 SESSION_ID（SOURCE_FILE 必须位于 sessions/<id>/ 下）
+if [[ ! "$SOURCE_FILE" =~ sessions/[^/]+/ ]]; then
+    echo "错误：SOURCE_FILE 必须位于 sessions/<id>/ 目录下：$SOURCE_FILE" >&2
+    exit 1
+fi
+SESSION_ID=$(basename "$(dirname "$SOURCE_FILE")")
+
+"$SCRIPTS_DIR/cleanup-session.sh" "$STATE_DIR" "$SESSION_ID"

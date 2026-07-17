@@ -5,7 +5,7 @@
 # 用法：
 #   scripts/core/reset-session.sh [<SESSION_FILE>]
 #
-# 若未提供 SESSION_FILE，根据 .current-session-id 或 CLAUDE_SESSION_ID 构造路径。
+# 若未提供 SESSION_FILE，根据 CLAUDE_SESSION_ID 环境变量（或 default）构造路径。
 #
 
 set -euo pipefail
@@ -14,14 +14,7 @@ SESSION_FILE="${1:-}"
 
 if [[ -z "$SESSION_FILE" ]]; then
     STATE_DIR="${STATE_DIR:-.claude/state}"
-    SESSION_ID=""
-
-    if [[ -f "$STATE_DIR/.current-session-id" ]]; then
-        SESSION_ID=$(cat "$STATE_DIR/.current-session-id")
-    else
-        SESSION_ID="${CLAUDE_SESSION_ID:-default}"
-    fi
-
+    SESSION_ID="${CLAUDE_SESSION_ID:-default}"
     SESSION_FILE="$STATE_DIR/sessions/$SESSION_ID/session.md"
 fi
 

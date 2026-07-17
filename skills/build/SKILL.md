@@ -29,7 +29,7 @@ description: 当用户需要生成新代码、重构或修改行为时触发
    ~/.claude/scripts/core/ensure-state.sh build .claude/state "${SESSION_ID:-${CLAUDE_SESSION_ID:-default}}"
    ```
 
-该脚本会创建 `.claude/state/sessions/<id>/` 并确保 `session.md` 与 `plan.md` 的 frontmatter 完整，同时将会话 ID 持久化到 `.claude/state/.current-session-id`。
+该脚本会创建 `.claude/state/sessions/<id>/` 并确保 `session.md` 与 `plan.md` 的 frontmatter 完整。派生的 SESSION_ID 必须写入 `session.md` 的 `context.session_id` 字段，并在后续调用 `infer-workflow.sh`、`write-archive.sh`、`cleanup-session.sh`、`reset-session.sh` 等脚本时显式作为参数或环境变量传递，不再落盘到任何共享文件。
 
 ## 工作流
 

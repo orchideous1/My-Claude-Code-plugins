@@ -12,7 +12,7 @@
 #   STATE_DIR     - 状态根目录，默认 .claude/state
 #
 # 环境变量：
-#   CLAUDE_SESSION_ID - 若未提供且 .current-session-id 不存在，则使用 default
+#   CLAUDE_SESSION_ID - 未提供时默认 default，用于 index.md 中"会话"字段
 #
 # 退出码：
 #   0 - 归档成功
@@ -39,12 +39,7 @@ if [[ ! -f "$SOURCE_FILE" ]] || [[ ! -s "$SOURCE_FILE" ]]; then
     exit 1
 fi
 
-SESSION_ID=""
-if [[ -f "$STATE_DIR/.current-session-id" ]]; then
-    SESSION_ID=$(cat "$STATE_DIR/.current-session-id")
-else
-    SESSION_ID="${CLAUDE_SESSION_ID:-default}"
-fi
+SESSION_ID="${CLAUDE_SESSION_ID:-default}"
 
 ARCHIVE_DIR="$STATE_DIR/archive"
 mkdir -p "$ARCHIVE_DIR"

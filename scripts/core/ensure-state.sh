@@ -10,10 +10,6 @@
 #   STATE_DIR  - 状态根目录，默认 .claude/state
 #   SESSION_ID - 会话标识；默认读取 CLAUDE_SESSION_ID 环境变量，否则 default
 #
-# 说明：
-#   最终使用的 SESSION_ID 会写入 .claude/state/.current-session-id，
-#   供同一会话内的其他脚本在环境变量未显式设置时读取。
-#
 # 退出码：
 #   0 - 状态目录已就绪
 #   1 - 初始化失败
@@ -106,9 +102,6 @@ write_handoff_template() {
 
 EOF
 }
-
-# 持久化当前会话 ID
-echo "$SESSION_ID" > "$STATE_DIR/.current-session-id"
 
 # 1. session.md 必须存在且 frontmatter 完整
 if ! validate_frontmatter "$SESSION_FILE" "current_phase"; then
