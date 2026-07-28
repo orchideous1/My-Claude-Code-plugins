@@ -12,7 +12,12 @@
 #   STATE_DIR     - 状态根目录，默认 .claude/state
 #
 # 环境变量：
-#   CLAUDE_SESSION_ID - 未提供时默认 default，用于 index.md 中"会话"字段
+#   CLAUDE_SESSION_ID - 会话 ID 来源之一，优先级最高
+#
+# SESSION_ID 回退顺序：
+#   1. CLAUDE_SESSION_ID 环境变量
+#   2. 从 SOURCE_FILE 路径推断（要求位于 sessions/<id>/ 下）
+#   3. 字面量 default
 #
 # 退出码：
 #   0 - 归档成功
@@ -39,7 +44,11 @@ if [[ ! -f "$SOURCE_FILE" ]] || [[ ! -s "$SOURCE_FILE" ]]; then
     exit 1
 fi
 
-SESSION_ID="${CLAUDE_SESSION_ID:-default}"
+SESSION_ID="${CLAUDE_SESSION_ID:-}"
+if [[ -z "$SESSION_ID" ]] && [[ "$SOURCE_FILE" =~ sessions/[^/]+/ ]]; then
+    SESSION_ID=$(basename "$(dirname "$SOURCE_FILE")")
+fi
+SESSION_ID="${SESSION_ID:-default}"
 
 ARCHIVE_DIR="$STATE_DIR/archive"
 mkdir -p "$ARCHIVE_DIR"
@@ -84,7 +93,13 @@ cp "$SOURCE_FILE" "$ARCHIVE_FILE"
 echo "已归档 guide：$ARCHIVE_FILE"
 
 # 提取摘要（单进程 awk，避免 grep|head 触发 SIGPIPE 被 pipefail 捕获）
-SUMMARY=$(awk '/^# /{p=1; next} p && NF {print; exit}' "$SOURCE_FILE")
+# 跳过 frontmatter 块（--- 到 ---）与所有以 # 开头的标题行，取首个非空正文行
+SUMMARY=$(awk '
+    /^---[[:space:]]*$/ { if (fm < 2) { fm++; next } }
+    fm == 1 { next }
+    /^#/ { next }
+    NF { print; exit }
+' "$SOURCE_FILE")
 [[ -z "$SUMMARY" ]] && SUMMARY="无摘要"
 
 # 更新 archive/index.md

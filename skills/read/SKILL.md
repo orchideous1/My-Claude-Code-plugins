@@ -29,7 +29,7 @@ description: 当用户需要排查 bug、理解代码行为或调查意外行为
    ~/.claude/scripts/core/ensure-state.sh read .claude/state "${SESSION_ID:-${CLAUDE_SESSION_ID:-default}}"
    ```
 
-该脚本会创建 `.claude/state/sessions/<id>/` 并确保 `session.md` 的 frontmatter 完整。派生的 SESSION_ID 必须写入 `session.md` 的 `context.session_id` 字段，并在后续调用 `infer-workflow.sh`、`write-archive.sh`、`cleanup-session.sh`、`reset-session.sh` 等脚本时显式作为参数或环境变量传递，不再落盘到任何共享文件。
+该脚本会创建 `.claude/state/sessions/<id>/` 并确保 `session.md` 的 frontmatter 完整。派生的 SESSION_ID 必须写入 `session.md` 的 `context.session_id` 字段。
 
 ## 工作流
 

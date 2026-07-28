@@ -135,7 +135,9 @@
 
 ### 状态脚本
 
-可固化的状态操作收敛到 `scripts/core/*.sh`，各 skill 在启动和收尾时直接调用：
+可固化的状态操作收敛到 `scripts/core/*.sh`，各 skill 在启动和收尾时直接调用。
+
+**通用约定**：所有 `scripts/core/*.sh` 调用必须显式传 SESSION_ID 参数或 `CLAUDE_SESSION_ID` 环境变量；脚本不再读共享文件。
 
 - `derive-session-id.sh <PHRASE>`：从用户目标/焦点短语生成短会话 ID slug（≤30 字符，保留中文与 ASCII）。
 - `ensure-state.sh [workflow] [STATE_DIR] [SESSION_ID]`：初始化/校验 `.claude/state/sessions/<id>/` 及 `session.md`、`plan.md`、`architecture.md`、`handoff.md`。SESSION_ID 由调用方显式传入或取自 `CLAUDE_SESSION_ID` 环境变量，不再落盘到共享文件。
@@ -152,7 +154,7 @@
   - `sessions/<id>/session.md` 与 `goal-tracker.md` 的 YAML frontmatter 完整性
   - 旧路径 `.claude/session.md` 是否存在并提示迁移
   - 是否存在其他 dirty 会话状态并提示并发冲突
-  - 调用 `ensure-state.sh` 时使用持久化的会话 ID 补全当前会话状态
+  - 调用 `ensure-state.sh` 时使用 `CLAUDE_SESSION_ID` 环境变量（未设置时回退 `default`）补全当前会话状态
   - 异常时阻断
 - `archive.sh`：在用户确认归档后执行归档。负责：
   - 接收已确认的 guide 来源文件、归档描述、workflow 类型
