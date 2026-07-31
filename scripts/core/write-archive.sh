@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 #
-# write-archive.sh - 将已确认的 guide 写入 archive 并更新索引。
+# write-archive.sh - 将已确认的 guide 写入 archive。
+#
+# 说明：不再维护 archive/index.md；归档索引由 summarize 技能
+#       在项目级 CLAUDE.md 的「已归档内容」区维护。
 #
 # 用法：
 #   scripts/core/write-archive.sh <SOURCE_FILE> <DESCRIPTION> [WORKFLOW_TYPE] [STATE_DIR]
@@ -91,47 +94,3 @@ fi
 
 cp "$SOURCE_FILE" "$ARCHIVE_FILE"
 echo "已归档 guide：$ARCHIVE_FILE"
-
-# 提取摘要（单进程 awk，避免 grep|head 触发 SIGPIPE 被 pipefail 捕获）
-# 跳过 frontmatter 块（--- 到 ---）与所有以 # 开头的标题行，取首个非空正文行
-SUMMARY=$(awk '
-    /^---[[:space:]]*$/ { if (fm < 2) { fm++; next } }
-    fm == 1 { next }
-    /^#/ { next }
-    NF { print; exit }
-' "$SOURCE_FILE")
-[[ -z "$SUMMARY" ]] && SUMMARY="无摘要"
-
-# 更新 archive/index.md
-INDEX_FILE="$ARCHIVE_DIR/index.md"
-if [[ ! -f "$INDEX_FILE" ]]; then
-    cat > "$INDEX_FILE" <<'EOF'
----
-updated:
----
-
-# 归档索引
-
-本文件由 `archive.sh` 自动维护，记录所有已归档的会话总结。新会话开始时应优先读取本文件以了解历史进展。
-
-## 归档记录
-
-EOF
-fi
-
-REL_LINK="archive/$(basename "$ARCHIVE_FILE")"
-
-{
-    echo ""
-    echo "### $ARCHIVE_NAME_BASE"
-    echo ""
-    echo "- **类型**: $WORKFLOW_TYPE"
-    echo "- **时间**: $TIMESTAMP"
-    echo "- **会话**: $SESSION_ID"
-    echo "- **摘要**: $SUMMARY"
-    echo "- $SUFFIX: [$REL_LINK]($REL_LINK)"
-} >> "$INDEX_FILE"
-
-sed -i "s/^updated:.*/updated: $(date +%Y-%m-%d)/" "$INDEX_FILE"
-
-echo "已更新归档索引：$INDEX_FILE"

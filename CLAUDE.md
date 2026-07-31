@@ -24,6 +24,30 @@
 - 发现两边内容雷同时 → 按本分工原则重新归位，不双写。
 - 部署副本（如 `~/.claude/scripts/`、`~/.claude/skills/`、`~/.claude/hooks/`）通过 `rsync` 从本仓库同步，但 **`~/.claude/CLAUDE.md` 不从本文件同步**。
 
+## 项目进展（goal-tracker简化版）
+
+| 日期 | 内容 |
+|------|------|
+| 2026-07-15 | 重新设计 summarize 归档系统：审查驱动、内容分层、并发安全 |
+| 2026-07-16 | 重构 documentation 技能为会话收尾与对齐技能；移除 command 层、统一状态路径 |
+| 2026-07-17 | 移除 .current-session-id 持久化机制：SESSION_ID 改为显式参数传递 |
+| 2026-07-18 | 修复 write-archive.sh 会话 ID 来源与摘要提取缺陷；确立 CLAUDE.md 职责分工 |
+| 2026-07-30 | 取消 archive/index.md：归档索引迁入本文件，状态模板规范化，输出文件收口 |
+
+> 具体进度详见 .claude/state/goal-tracker.md
+
+## 活跃sessions
+
+> 具体说明详见 .claude/state/sessions/**
+
+## 已归档内容
+
+- 2026-07-15-010000-重新设计归档系统-build-handoff.md — 重新设计 summarize 归档系统：审查驱动、内容分层、并发安全
+- 2026-07-18-003428-移除current-session-id持久化-build-handoff.md — SESSION_ID 改为显式参数传递；修复 write-archive.sh 会话来源与摘要抓取缺陷
+- 2026-07-30-184917-取消archive索引与状态模板规范化-build-handoff.md — 取消 archive/index.md，归档索引迁入项目 CLAUDE.md；状态模板规范化；工作流输出文件收口
+
+> 具体说明详见 .claude/state/archive/**
+
 ## 核心工作流
 
 本系统定义了四个核心工作流技能，会话开始时自动加载 `using-workflows` 技能，强制先根据场景触发对应技能再行动。
@@ -131,7 +155,7 @@
 - `read`：REPORT → FIX 必须获得用户批准
 - `build`：PLANNING → EXECUTING 必须获得用户批准
 - `arch`：MODEL 后必须自审，有缺口则回退
-- `summarize`：REVIEW → ALIGN → EVALUATE → PACKAGE → ARCHIVE → AUDIT；PACKAGE 生成归档内容方案并提前询问用户是否归档，用户确认后调用归档 hook 写入 archive 并清理原会话目录，随后进入 AUDIT；AUDIT 结果只向用户展示，不写入文件，也不进入 archive；用户不确认则不归档。
+- `summarize`：REVIEW → ALIGN → EVALUATE → PACKAGE → ARCHIVE → AUDIT；PACKAGE 生成归档内容方案并提前询问用户是否归档，用户确认后调用归档 hook 写入 archive、清理原会话目录，并将归档条目追加到本文件「已归档内容」区，随后进入 AUDIT；AUDIT 结果只向用户展示，不写入文件，也不进入 archive；用户不确认则不归档。
 
 ### 状态脚本
 
@@ -143,7 +167,7 @@
 - `ensure-state.sh [workflow] [STATE_DIR] [SESSION_ID]`：初始化/校验 `.claude/state/sessions/<id>/` 及 `session.md`、`plan.md`、`architecture.md`、`handoff.md`。SESSION_ID 由调用方显式传入或取自 `CLAUDE_SESSION_ID` 环境变量，不再落盘到共享文件。
 - `infer-workflow.sh [<SESSION_FILE>]`：从 `session.md` 推断 workflow 类型；未提供文件时根据 `CLAUDE_SESSION_ID`（或 `default`）构造路径。
 - `reset-session.sh [<SESSION_FILE>]`：将 `session.md` 重置为 IDLE 模板。
-- `write-archive.sh <SOURCE_FILE> <DESCRIPTION> [WORKFLOW_TYPE] [STATE_DIR]`：将已确认的 guide 复制到 `archive/`，按类型命名并更新 `archive/index.md`。
+- `write-archive.sh <SOURCE_FILE> <DESCRIPTION> [WORKFLOW_TYPE] [STATE_DIR]`：将已确认的 guide 复制到 `archive/` 并按类型命名；不维护 `archive/index.md`，归档索引由 `summarize` 写入项目级 `CLAUDE.md` 的「已归档内容」区。
 - `cleanup-session.sh [STATE_DIR] [SESSION_ID]`：归档后删除原 `sessions/<id>/` 目录。SESSION_ID 由调用方显式传入；`hooks/summarize/archive.sh` 会从 `SOURCE_FILE` 路径推断并显式传递。
 
 ### 归档 hooks
@@ -152,9 +176,10 @@
 
 - `pre-summarize.sh`：在 `summarize` 执行前检查：
   - `sessions/<id>/session.md` 与 `goal-tracker.md` 的 YAML frontmatter 完整性
+  - `goal-tracker.md` 缺失时从 `prompt-templates/state/goal-tracker_example.md` 自动初始化（模板缺失才报错）
   - 旧路径 `.claude/session.md` 是否存在并提示迁移
   - 是否存在其他 dirty 会话状态并提示并发冲突
-  - 调用 `ensure-state.sh` 时使用 `CLAUDE_SESSION_ID` 环境变量（未设置时回退 `default`）补全当前会话状态
+  - 补全当前会话状态：仅在 `CLAUDE_SESSION_ID` 显式设置或会话目录已存在时调用 `ensure-state.sh`，避免凭空创建 `sessions/default/` 残留目录
   - 异常时阻断
 - `archive.sh`：在用户确认归档后执行归档。负责：
   - 接收已确认的 guide 来源文件、归档描述、workflow 类型
@@ -183,10 +208,11 @@
 
 1. 状态文件统一存放在当前 workspace 的 `.claude/state/` 目录。
 2. 中间状态按会话隔离，存放在 `.claude/state/sessions/<CLAUDE_SESSION_ID>/`。
-3. 长期记忆文件（`goal-tracker.md`、`archive/index.md`）存放在 `.claude/state/` 根目录。
+3. 长期记忆文件（`goal-tracker.md`）存放在 `.claude/state/` 根目录；归档索引维护在项目级 `CLAUDE.md` 的「已归档内容」区。
 4. 所有状态文件使用 YAML frontmatter + Markdown body 格式。
 5. 不得破坏状态文件的 YAML frontmatter。
 6. 归档产物存放在 `.claude/state/archive/`，按工作流类型命名。
+7. 工作流、脚本与 hook 产生的文件必须落在本状态架构内，不得产生规范外文件（如 `archive/index.md`、未约定路径的总结/备份文件）。
 
 ---
 
@@ -198,11 +224,11 @@
 |------|------|----------|------|
 | 中间状态 | `.claude/state/sessions/<id>/` | `session.md`、`plan.md`、待归档的 `handoff.md` / `architecture.md` | 单会话工作草稿，会话结束后重置 |
 | 归档产物 | `.claude/state/archive/` | `<timestamp>-<desc>-<type>-<artifact>.md` | 经审查的 guide 快照，保留足够过程信息 |
-| 长期记忆 | `.claude/state/` 根目录 + `CLAUDE.md` | `goal-tracker.md`、`archive/index.md`、`CLAUDE.md` | 跨会话共享，协作规则与目标 |
+| 长期记忆 | `.claude/state/` 根目录 + `CLAUDE.md` | `goal-tracker.md`、`CLAUDE.md`（含「已归档内容」索引区） | 跨会话共享，协作规则与目标 |
 
 ### 归档索引
 
-`.claude/state/archive/index.md` 由 `archive.sh` 自动维护，记录所有已归档的会话总结。新会话开始时应优先读取本文件以了解历史进展与关键 handoff。
+不再维护 `.claude/state/archive/index.md`。归档索引记录在项目级 `CLAUDE.md` 的「已归档内容」区，由 `summarize` 在 ARCHIVE 阶段按用户已确认的归档方案追加条目，格式：`- <归档文件名> — <一句话摘要>`。新会话开始时应优先阅读本索引以了解历史进展与关键 handoff。
 
 ### 工作流感知的归档命名
 
@@ -243,6 +269,8 @@ AUDIT 结果按「阻塞 / 建议 / 通过」分类，只向用户展示，不�
 ### CLAUDE.md 变更受控
 
 `CLAUDE.md` 是项目级协作规则的核心载体，**所有内容增改必须经用户审核**。AUDIT 阶段可提出优化建议，但绝不能自动写入。审核通过后，应通过 `build` 流程执行修改。
+
+例外：归档索引条目（「已归档内容」区）的追加属于用户在 PACKAGE 阶段确认的归档方案的一部分，由 `summarize` 执行，不视为未受控变更。
 
 ### 并发会话隔离
 

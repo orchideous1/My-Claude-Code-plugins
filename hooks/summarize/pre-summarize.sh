@@ -3,6 +3,9 @@
 #
 # pre-summarize.sh - 在 /summarize 执行前检查状态文件 frontmatter 完整性、
 #                    旧路径冗余与并发会话冲突。
+#                    goal-tracker.md 缺失时从标准模板自动初始化。
+#                    仅在 CLAUDE_SESSION_ID 显式设置或会话目录已存在时
+#                    补全会话状态，避免凭空创建 sessions/default/ 残留目录。
 #
 # 用法：
 #   hooks/summarize/pre-summarize.sh [STATE_DIR]
@@ -30,16 +33,17 @@ GOAL_FILE="$STATE_DIR/goal-tracker.md"
 OLD_SESSION_FILE="$STATE_DIR/../session.md"
 SESSIONS_DIR="$STATE_DIR/sessions"
 
-# 检查 goal-tracker.md 是否存在
+# goal-tracker.md 缺失时从标准模板自动初始化；模板缺失才报错
+# 模板路径相对于本脚本解析，仓库布局与 ~/.claude 部署布局均适用
+GOAL_TEMPLATE="$SCRIPT_DIR/../../prompt-templates/state/goal-tracker_example.md"
 if [[ ! -f "$GOAL_FILE" ]]; then
-    echo "错误：goal-tracker.md 不存在：$GOAL_FILE" >&2
-    exit 1
-fi
-
-# 使用 ensure-state.sh 初始化/补全当前会话状态（抑制 stdout）
-if ! "$SCRIPTS_DIR/ensure-state.sh" general "$STATE_DIR" "$SESSION_ID" > /dev/null; then
-    echo "错误：无法初始化当前会话状态" >&2
-    exit 1
+    if [[ -f "$GOAL_TEMPLATE" ]]; then
+        cp "$GOAL_TEMPLATE" "$GOAL_FILE"
+        echo "已从模板初始化 goal-tracker.md：$GOAL_FILE"
+    else
+        echo "错误：goal-tracker.md 不存在且初始化模板缺失：$GOAL_TEMPLATE" >&2
+        exit 1
+    fi
 fi
 
 # 检查 YAML frontmatter 是否完整
@@ -63,7 +67,18 @@ check_frontmatter() {
     return 0
 }
 
-check_frontmatter "$SESSION_FILE" "current_phase"
+# 使用 ensure-state.sh 补全当前会话状态（抑制 stdout）。
+# 仅当 CLAUDE_SESSION_ID 显式设置或会话目录已存在时才补全；
+# 否则在环境变量未设置（SESSION_ID 走显式参数传递）的场景下，
+# 会凭空创建 sessions/default/ 残留目录
+if [[ -n "${CLAUDE_SESSION_ID:-}" ]] || [[ -d "$STATE_DIR/sessions/$SESSION_ID" ]]; then
+    if ! "$SCRIPTS_DIR/ensure-state.sh" general "$STATE_DIR" "$SESSION_ID" > /dev/null; then
+        echo "错误：无法初始化当前会话状态" >&2
+        exit 1
+    fi
+    check_frontmatter "$SESSION_FILE" "current_phase"
+fi
+
 check_frontmatter "$GOAL_FILE" "updated"
 
 # 检查旧路径 .claude/session.md 是否存在

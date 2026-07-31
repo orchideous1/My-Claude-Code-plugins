@@ -6,7 +6,7 @@
 
 **离开本阶段的验收标准**：
 - 已调用 `write-archive.sh` 或 `hooks/summarize/archive.sh` 完成归档；
-- `.claude/state/archive/index.md` 已更新；
+- 项目级 `CLAUDE.md` 的「已归档内容」区已追加归档条目；
 - 原 `sessions/<id>/` 目录已被删除；
 - 已向用户总结归档内容（文件名、位置、摘要）。
 
@@ -29,7 +29,15 @@
 ~/.claude/hooks/summarize/archive.sh <SOURCE_FILE> <DESCRIPTION> <WORKFLOW_TYPE> .claude/state
 ```
 
-归档成功后，向用户输出：
+归档成功后，将 PACKAGE 阶段用户已确认的归档条目追加到项目级 `CLAUDE.md` 的「已归档内容」区（该区条目属于已确认归档方案的一部分，不视为未受控的 CLAUDE.md 变更）。条目格式：
+
+```markdown
+- <timestamp>-<desc>-<workflow>-<artifact>.md — <一句话摘要>
+```
+
+若项目级 `CLAUDE.md` 尚无「已归档内容」区，参照 `~/.claude/prompt-templates/state/CLAUDE_example.md` 补建该区后再追加。
+
+最后向用户输出：
 
 1. **已归档文件名**：`archive/<timestamp>-<desc>-<workflow>-<artifact>.md`
 2. **摘要**：guide 的第一段核心内容

@@ -24,10 +24,11 @@ description: 当会话结束、切换任务或需要总结归档时触发
 
 1. 复用主代理上下文中由 build/read/arch 启动时派生的 SESSION_ID；若上下文丢失，从最近一次修改的 `.claude/state/sessions/*/session.md` 的 `context.session_id` 字段读取。
 2. 如果上下文与文件系统都没有可用 ID，回退到 `CLAUDE_SESSION_ID` 环境变量或 `default`；若 `sessions/default/` 不存在或非 dirty，按 `general` workflow 处理。
-3. 调用：
+3. 仅当目标会话目录已存在时，调用 ensure-state.sh 补全模板：
    ```bash
-   ~/.claude/scripts/core/ensure-state.sh general .claude/state "${SESSION_ID:-${CLAUDE_SESSION_ID:-default}}"
+   ~/.claude/scripts/core/ensure-state.sh general .claude/state "$SESSION_ID"
    ```
+   若 `sessions/$SESSION_ID/` 不存在，**不要**调用 ensure-state.sh 创建它——summarize 只整理已有状态，凭空创建（尤其是 `sessions/default/`）会留下无属主的残留目录。
 
 该调用仅确保目录与模板存在，不会覆盖已有 `session.md` 内容。
 
@@ -115,8 +116,9 @@ guide 必须保留足够过程信息，避免过度简化（例如保留关键�
        [<WORKFLOW_TYPE>] \
        .claude/state
    ```
-3. 归档成功后，调用 `cleanup-session.sh` 删除原 `sessions/<id>/` 目录。
-4. 向用户总结归档内容：文件名、位置、摘要。
+3. 归档成功后，调用 `cleanup-session.sh` 删除原 `sessions/<id>/` 目录（使用 hook 入口时由 hook 一并完成）。
+4. 将归档条目追加到项目级 `CLAUDE.md` 的「已归档内容」区，格式：`- <归档文件名> — <一句话摘要>`。条目内容来自 PACKAGE 阶段用户已确认的归档方案，不视为未受控的 CLAUDE.md 变更。
+5. 向用户总结归档内容：文件名、位置、摘要。
 
 使用提示模板：`prompt-templates/summarize/archive.md`
 
@@ -147,7 +149,8 @@ sub-agent 的任务：
 | 回答质量评价 | 是 | 否 |
 | guide 生成与归档方案 | 是 | 否 |
 | 用户确认归档 | 是 | 否 |
-| 实际写入 archive / 更新 index | 否 | 是 |
+| 实际写入 archive | 否 | 是 |
+| 更新项目 CLAUDE.md 归档索引 | 是（条目来自用户已确认的归档方案） | 否 |
 | 归档后删除 `sessions/<id>/` | 否 | 是 |
 | 状态文件 frontmatter 检查 | 否 | 是 |
 | 旧路径 `.claude/session.md` 检测 | 否 | 是 |
@@ -170,13 +173,12 @@ sub-agent 的任务：
   - read：`handoff.md` → `<timestamp>-<desc>-read-report.md`
   - arch：`architecture.md` → `<timestamp>-<desc>-arch-model.md`
   - general：`handoff.md` → `<timestamp>-<desc>-general-summary.md`
-- 生命周期：长期保存，供新会话通过 `archive/index.md` 发现
+- 生命周期：长期保存，供新会话通过项目级 `CLAUDE.md` 的「已归档内容」索引发现
 
 ### 长期记忆（跨会话）
 
 - `.claude/state/goal-tracker.md`：目标追踪
-- `.claude/state/archive/index.md`：归档索引
-- `CLAUDE.md`：项目协作规则，**所有增改必须经用户审核**
+- `CLAUDE.md`：项目协作规则与归档索引（「已归档内容」区），**所有增改必须经用户审核**（归档索引追加除外——属 PACKAGE 已确认方案的一部分）
 - 记忆文件：用户偏好、反馈、项目背景
 
 ## 归档约定
@@ -195,7 +197,7 @@ sub-agent 的任务：
 ## 输出产物
 
 - `.claude/state/archive/<timestamp>-<desc>-<type>-<artifact>.md`：归档 guide
-- `.claude/state/archive/index.md`：由 hook 维护的归档索引
+- 项目级 `CLAUDE.md`：「已归档内容」区追加的归档条目
 - `.claude/state/goal-tracker.md`：同步目标状态
 - 归档成功后，原 `sessions/<id>/` 目录被删除
 
@@ -207,9 +209,6 @@ sub-agent 的任务：
 - `prompt-templates/summarize/package.md`
 - `prompt-templates/summarize/archive.md`
 - `prompt-templates/summarize/audit.md`
-- `prompt-templates/summarize/session-summary.md`
-- `prompt-templates/summarize/goal-tracker.md`
-- `prompt-templates/summarize/plan-backup.md`
 
 ## 危险信号
 
@@ -218,7 +217,7 @@ sub-agent 的任务：
 - 直接在 skill 中操作归档文件
 - 遗漏 `architecture.md` 等内容迁移检查
 - AUDIT 阶段自动修改 `CLAUDE.md`
-- 未处理并发会话冲突
 - AUDIT 结果误写入文件或归档
 - guide 过度简化，丢失关键过程信息
 - summarize 创建新的会话 ID 或覆盖其他会话目录
+- 产生规范外的输出文件（如 `archive/index.md`、未约定路径的总结/备份文件）；系统产出必须收敛于三层状态模型：`sessions/<id>/` 中间状态、`archive/` 归档产物、`goal-tracker.md` + 项目 CLAUDE.md 长期记忆
