@@ -20,7 +20,7 @@ description: 当用户需要排查 bug、理解代码行为或调查意外行为
 
 在 SCOPE 阶段开始读写状态前：
 
-1. 如果环境变量 `CLAUDE_SESSION_ID` 未设置，根据调查目标生成会话 ID：
+1. 如果环境变量 `CLAUDE_SESSION_ID` 未设置，根据调查目标生成会话 ID。**会话 ID 避免使用中文**：先将调查目标提炼为英文（ASCII）短语，再传入脚本。
    ```bash
    SESSION_ID=$(~/.claude/scripts/core/derive-session-id.sh "{{INVESTIGATION_TARGET}}")
    ```

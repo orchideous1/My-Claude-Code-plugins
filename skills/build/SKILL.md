@@ -20,7 +20,7 @@ description: 当用户需要生成新代码、重构或修改行为时触发
 
 在 UNDERSTANDING 阶段开始读写状态前：
 
-1. 如果环境变量 `CLAUDE_SESSION_ID` 未设置，根据用户目标生成会话 ID：
+1. 如果环境变量 `CLAUDE_SESSION_ID` 未设置，根据用户目标生成会话 ID。**会话 ID 避免使用中文**：先将用户目标提炼为英文（ASCII）短语，再传入脚本。
    ```bash
    SESSION_ID=$(~/.claude/scripts/core/derive-session-id.sh "{{USER_GOAL}}")
    ```

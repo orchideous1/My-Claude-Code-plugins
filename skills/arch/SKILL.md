@@ -22,7 +22,7 @@ description: 当用户需要理解复杂项目、模块或数据流架构时触�
 
 在 SCOPE 阶段开始读写状态前：
 
-1. 如果环境变量 `CLAUDE_SESSION_ID` 未设置，根据架构焦点生成会话 ID：
+1. 如果环境变量 `CLAUDE_SESSION_ID` 未设置，根据架构焦点生成会话 ID。**会话 ID 避免使用中文**：先将架构焦点提炼为英文（ASCII）短语，再传入脚本。
    ```bash
    SESSION_ID=$(~/.claude/scripts/core/derive-session-id.sh "{{ARCHITECTURE_FOCUS}}")
    ```
