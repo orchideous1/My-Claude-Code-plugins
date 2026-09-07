@@ -7,7 +7,7 @@ description: 当会话结束、切换任务或需要总结归档时触发
 
 ## 用途
 
-在会话结束时帮助用户回顾本次产出、对齐目标完成度、评价回答质量，并安全归档经审查的会话 guide。
+在长程会话结束时帮助用户回顾本次产出、对齐目标完成度、评价回答质量，并决定删除中间状态或归档经提炼的长期参考文档。
 
 本技能负责生成回顾、评估、审查与归档方案；具体的文件写入、归档、清理等机械操作交给 `scripts/core/` 与 hooks 执行。
 
@@ -68,30 +68,14 @@ description: 当会话结束、切换任务或需要总结归档时触发
 
 使用提示模板：`prompt-templates/summarize/evaluate.md`
 
-### 4. PACKAGE（打包）
+### 4. PACKAGE（筛选）
 
-根据 `.claude/state/sessions/<id>/session.md` 的完整轨迹，整理为一份可归档的 guide：
+先判断会话是否包含尚未被现行代码或项目文档覆盖、且未来任务会直接复用的长期知识。可归档的知识包括稳定接口契约、数据布局、重建条件、运维风险或明确设计边界；过程日志、历史测试数量、一次性统计、试点样本和过时计划都不是归档理由。
 
-- `build` 工作流 → `.claude/state/sessions/<id>/handoff.md`
-- `read` 工作流 → `.claude/state/sessions/<id>/handoff.md`
-- `arch` 工作流 → 润色/确认 `.claude/state/sessions/<id>/architecture.md`
-- `general` 工作流 → `.claude/state/sessions/<id>/handoff.md`
+- **无长期知识**：向用户展示直接删除 `.claude/state/sessions/<id>/` 的方案。用户确认后调用 `cleanup-session.sh`，不写 archive，不更新项目归档索引。
+- **有长期知识**：在 `sessions/<id>/reference.md` 写入精炼文档，并以 `type: reference` frontmatter 标记。向用户展示其标题、适用场景、来源会话和目标文件名 `<timestamp>-<desc>-reference.md`，获得确认后进入 ARCHIVE。
 
-guide 必须保留足够过程信息，避免过度简化（例如保留关键决策理由、证据、代码位置、验证结果、待办与风险）。
-
-同时生成归档方案：
-
-- guide 来源文件
-- 目标归档文件名（格式：`<timestamp>-<desc>-<workflow>-<handoff|report|model|summary>.md`）
-- 一句话摘要
-
-**本阶段必须向用户展示归档方案并询问是否归档。**
-
-- 若用户同意归档 → 进入 ARCHIVE。
-- 若用户不同意归档：
-  - 询问是“需要继续修改 guide”还是“本次改进较小无需归档”。
-  - 若继续修改 → 返回 REVIEW 或 PACKAGE。
-  - 若无需归档 → 清空 guide 文件，结束 `summarize`。
+`reference.md` 只记录仍成立的事实、代码或配置位置、适用范围、风险与必要的待办。它不复述 session 的过程，也不保留原始 handoff、plan 或架构草稿。
 
 使用提示模板：`prompt-templates/summarize/package.md`
 
@@ -99,22 +83,20 @@ guide 必须保留足够过程信息，避免过度简化（例如保留关键�
 
 用户确认归档后执行：
 
-1. 确定 guide 来源文件和 workflow 类型。
+1. 确定已确认的 `sessions/<id>/reference.md` 来源文件。
 2. 调用脚本实际归档：
    ```bash
    ~/.claude/scripts/core/write-archive.sh \
        <SOURCE_FILE> \
        <DESCRIPTION> \
-       [<WORKFLOW_TYPE>] \
-       .claude/state
+        .claude/state
    ```
    或使用 hook 入口：
    ```bash
    ~/.claude/hooks/summarize/archive.sh \
        <SOURCE_FILE> \
        <DESCRIPTION> \
-       [<WORKFLOW_TYPE>] \
-       .claude/state
+        .claude/state
    ```
 3. 归档成功后，调用 `cleanup-session.sh` 删除原 `sessions/<id>/` 目录（使用 hook 入口时由 hook 一并完成）。
 4. 将归档条目追加到项目级 `CLAUDE.md` 的「已归档内容」区，格式：`- <归档文件名> — <一句话摘要>`。条目内容来自 PACKAGE 阶段用户已确认的归档方案，不视为未受控的 CLAUDE.md 变更。
@@ -126,7 +108,7 @@ guide 必须保留足够过程信息，避免过度简化（例如保留关键�
 
 AUDIT 与前面的回顾/对齐/评估在上下文上解耦。启动一个**独立 sub-agent**，仅向其暴露审计所需材料：
 
-- `.claude/state/sessions/` 下本次会话的 `session.md`、`plan.md`、guide 文件（如已归档，可传 archive 中副本）
+- `.claude/state/sessions/` 下本次会话的 `session.md`、`plan.md`、`reference.md`（如已归档，可传 archive 中副本）
 - 本次会话涉及的代码 diff（`git diff`）
 - `CLAUDE.md`
 
@@ -147,7 +129,7 @@ sub-agent 的任务：
 | 生成回顾内容 | 是 | 否 |
 | 目标对齐评估 | 是 | 否 |
 | 回答质量评价 | 是 | 否 |
-| guide 生成与归档方案 | 是 | 否 |
+| 长期知识筛选、参考文档与归档方案 | 是 | 否 |
 | 用户确认归档 | 是 | 否 |
 | 实际写入 archive | 否 | 是 |
 | 更新项目 CLAUDE.md 归档索引 | 是（条目来自用户已确认的归档方案） | 否 |
@@ -162,18 +144,14 @@ sub-agent 的任务：
 ### 中间状态（单会话）
 
 - 位置：`.claude/state/sessions/<CLAUDE_SESSION_ID>/`
-- 文件：`session.md`、`plan.md`、待归档的 `handoff.md` / `architecture.md`
+- 文件：`session.md`，以及按 workflow 创建的 `plan.md` 或 `architecture.md`；仅在通过筛选时临时创建 `reference.md`
 - 生命周期：会话内工作草稿，归档后删除
 
-### 归档产物（只读快照）
+### 归档产物（长期参考）
 
 - 位置：`.claude/state/archive/`
-- 命名规则：
-  - build：`handoff.md` → `<timestamp>-<desc>-build-handoff.md`
-  - read：`handoff.md` → `<timestamp>-<desc>-read-report.md`
-  - arch：`architecture.md` → `<timestamp>-<desc>-arch-model.md`
-  - general：`handoff.md` → `<timestamp>-<desc>-general-summary.md`
-- 生命周期：长期保存，供新会话通过项目级 `CLAUDE.md` 的「已归档内容」索引发现
+- 命名规则：`reference.md` → `<timestamp>-<desc>-reference.md`
+- 生命周期：只保存精选的长期参考，供新会话通过项目级 `CLAUDE.md` 的「已归档内容」索引发现
 
 ### 长期记忆（跨会话）
 
@@ -183,9 +161,9 @@ sub-agent 的任务：
 
 ## 归档约定
 
-- 归档文件名：`<时间戳>-<简短描述>-<工作流类型>-<产物类型>.md`
-- 示例：`2026-07-15-重构归档系统-build-handoff.md`
-- 只归档 guide；`session.md` 与 `plan.md` 等中间状态在归档后随 `sessions/<id>/` 一起删除，不进入 archive。
+- 归档文件名：`<时间戳>-<简短描述>-reference.md`
+- 示例：`2026-07-15-状态治理-reference.md`
+- 只归档已确认的 `reference.md`；其他 session 中间状态在删除或归档后随目录一起清理，不进入 archive。
 
 ## 并发会话
 
@@ -196,7 +174,7 @@ sub-agent 的任务：
 
 ## 输出产物
 
-- `.claude/state/archive/<timestamp>-<desc>-<type>-<artifact>.md`：归档 guide
+- `.claude/state/archive/<timestamp>-<desc>-reference.md`：归档参考文档
 - 项目级 `CLAUDE.md`：「已归档内容」区追加的归档条目
 - `.claude/state/goal-tracker.md`：同步目标状态
 - 归档成功后，原 `sessions/<id>/` 目录被删除
@@ -218,6 +196,6 @@ sub-agent 的任务：
 - 遗漏 `architecture.md` 等内容迁移检查
 - AUDIT 阶段自动修改 `CLAUDE.md`
 - AUDIT 结果误写入文件或归档
-- guide 过度简化，丢失关键过程信息
+- 为保留过程记录而归档，或将历史统计、原始计划写入 reference
 - summarize 创建新的会话 ID 或覆盖其他会话目录
 - 产生规范外的输出文件（如 `archive/index.md`、未约定路径的总结/备份文件）；系统产出必须收敛于三层状态模型：`sessions/<id>/` 中间状态、`archive/` 归档产物、`goal-tracker.md` + 项目 CLAUDE.md 长期记忆

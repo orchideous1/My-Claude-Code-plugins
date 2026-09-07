@@ -27,11 +27,13 @@ description: 在每次会话开始时加载，强制先检查工作流技能
 - 用户表达「理解架构、梳理结构、建模」等意图时，触发 `arch`。
 - 用户表达「 summarize、收尾、归档」或当前目标已完成时，触发 `summarize`。
 
-每个 skill 启动后会首先调用 `~/.claude/scripts/core/ensure-state.sh <workflow>` 初始化状态目录，随后按阶段推进。
+调用工作流 skill 不等于创建 session。先判断是否需要跨会话状态：仅当任务预计跨多个用户回合、需要等待外部运行或人工决策、包含多个可独立验收的里程碑，或用户明确要求记录 session 时，才调用 `ensure-state.sh`。短问答、一次性排查和可在当前回合完成的小范围修改不创建 `.claude/state/sessions/` 目录。
+
+已创建 session 时才按工作流阶段更新状态文件；未创建时，阶段结论保留在对话、代码和现行项目文档中。
 
 ## 禁止事项
 
 - 不检查技能就直接开始复杂任务
 - 用普通对话绕过 `read`、`build`、`arch`
 - 在 skill 中重复定义工作流细节（流程、门控、模板路径）
-- 跳过 `ensure-state.sh` 直接读写状态文件
+- 已决定创建 session 却跳过 `ensure-state.sh`

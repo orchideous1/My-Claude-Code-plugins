@@ -24,8 +24,8 @@
 如有不清楚，询问用户。意图确认前不要进入规划。
 
 **操作**：
-- 调用 `~/.claude/scripts/core/ensure-state.sh build` 初始化状态。
-- 更新 `.claude/state/sessions/<id>/session.md`：
+- 先判断本任务是否需要跨会话状态或用户是否明确要求 session；只有结论为需要时，调用 `~/.claude/scripts/core/ensure-state.sh build`。
+- 已创建 session 时，更新 `.claude/state/sessions/<id>/session.md`：
   - `current_phase`: UNDERSTANDING
   - `context.user_goal`
   - `context.clarifications`

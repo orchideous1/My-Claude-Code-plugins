@@ -18,7 +18,7 @@ description: 当用户需要排查 bug、理解代码行为或调查意外行为
 
 ## 启动前必须执行
 
-在 SCOPE 阶段开始读写状态前：
+仅在调查需要跨会话跟进，或用户明确要求记录 session 时，在 SCOPE 阶段开始读写状态前：
 
 1. 如果环境变量 `CLAUDE_SESSION_ID` 未设置，根据调查目标生成会话 ID。**会话 ID 避免使用中文**：先将调查目标提炼为英文（ASCII）短语，再传入脚本。
    ```bash
@@ -29,7 +29,7 @@ description: 当用户需要排查 bug、理解代码行为或调查意外行为
    ~/.claude/scripts/core/ensure-state.sh read .claude/state "${SESSION_ID:-${CLAUDE_SESSION_ID:-default}}"
    ```
 
-该脚本会创建 `.claude/state/sessions/<id>/` 并确保 `session.md` 的 frontmatter 完整。派生的 SESSION_ID 必须写入 `session.md` 的 `context.session_id` 字段。
+短小、一次性的调查不创建 session，调查结论直接在报告中呈现。创建 session 时，脚本会创建 `.claude/state/sessions/<id>/` 并确保 `session.md` 的 frontmatter 完整；派生的 SESSION_ID 必须写入 `session.md` 的 `context.session_id` 字段。
 
 ## 工作流
 
@@ -41,7 +41,7 @@ description: 当用户需要排查 bug、理解代码行为或调查意外行为
 2. 确定入口点（URL、CLI 命令、函数调用）
 3. 确定涉及的组件
 4. 列出可疑文件或模块（只列不读）
-5. 将范围写入 `.claude/state/sessions/<id>/session.md`
+5. 已创建 session 时，将范围写入 `.claude/state/sessions/<id>/session.md`
 
 **→ SCOPE → HYPOTHESIS 门控**：
 - `context.scope` 必须包含入口点、预期/实际行为、可疑位置
@@ -103,7 +103,7 @@ description: 当用户需要排查 bug、理解代码行为或调查意外行为
 
 ## 状态更新
 
-每个阶段后更新 `.claude/state/sessions/<id>/session.md`：
+已创建 session 时，每个阶段后更新 `.claude/state/sessions/<id>/session.md`：
 - `current_phase`: SCOPE | HYPOTHESIS | EVIDENCE | REPORT | FIX
 - `context.investigation_target`
 - `context.hypotheses`
@@ -117,4 +117,4 @@ description: 当用户需要排查 bug、理解代码行为或调查意外行为
 - 不通过子代理直接阅读文件
 - 跳过证据收集
 - “我觉得可能是 X”
-- 不先调用 `ensure-state.sh`
+- 已决定创建 session 却不先调用 `ensure-state.sh`

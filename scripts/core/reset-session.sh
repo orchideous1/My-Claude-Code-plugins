@@ -19,7 +19,11 @@ if [[ -z "$SESSION_FILE" ]]; then
 fi
 
 DATE="$(date +%Y-%m-%d)"
-mkdir -p "$(dirname "$SESSION_FILE")"
+
+if [[ ! -f "$SESSION_FILE" ]]; then
+    echo "错误：会话文件不存在，拒绝隐式创建：$SESSION_FILE" >&2
+    exit 1
+fi
 
 cat > "$SESSION_FILE" <<EOF
 ---

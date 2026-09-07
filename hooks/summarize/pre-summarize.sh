@@ -4,8 +4,7 @@
 # pre-summarize.sh - 在 /summarize 执行前检查状态文件 frontmatter 完整性、
 #                    旧路径冗余与并发会话冲突。
 #                    goal-tracker.md 缺失时从标准模板自动初始化。
-#                    仅在 CLAUDE_SESSION_ID 显式设置或会话目录已存在时
-#                    补全会话状态，避免凭空创建 sessions/default/ 残留目录。
+#                    仅在会话目录已存在时补全会话状态，避免凭空创建残留目录。
 #
 # 用法：
 #   hooks/summarize/pre-summarize.sh [STATE_DIR]
@@ -67,11 +66,8 @@ check_frontmatter() {
     return 0
 }
 
-# 使用 ensure-state.sh 补全当前会话状态（抑制 stdout）。
-# 仅当 CLAUDE_SESSION_ID 显式设置或会话目录已存在时才补全；
-# 否则在环境变量未设置（SESSION_ID 走显式参数传递）的场景下，
-# 会凭空创建 sessions/default/ 残留目录
-if [[ -n "${CLAUDE_SESSION_ID:-}" ]] || [[ -d "$STATE_DIR/sessions/$SESSION_ID" ]]; then
+# 使用 ensure-state.sh 补全已存在的当前会话状态（抑制 stdout）。
+if [[ -d "$STATE_DIR/sessions/$SESSION_ID" ]]; then
     if ! "$SCRIPTS_DIR/ensure-state.sh" general "$STATE_DIR" "$SESSION_ID" > /dev/null; then
         echo "错误：无法初始化当前会话状态" >&2
         exit 1

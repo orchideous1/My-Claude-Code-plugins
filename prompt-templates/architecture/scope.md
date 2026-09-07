@@ -7,7 +7,7 @@
 **离开本阶段的验收标准**：
 - 焦点区域具体、可回答；
 - 理解了该架构的动机、入口点、范围边界；
-- 范围已写入 `.claude/state/sessions/<id>/session.md` 的 `context.architecture_focus`。
+- 已创建 session 时，范围已写入 `.claude/state/sessions/<id>/session.md` 的 `context.architecture_focus`。
 
 ## 输出格式与操作
 
@@ -25,7 +25,7 @@
 - 期望输出：（例如：一篇带代码片段的 walkthrough、一张数据流图、一份接口使用指南）
 
 **操作**：
-- 调用 `~/.claude/scripts/core/ensure-state.sh arch` 初始化状态。
-- 更新 `.claude/state/sessions/<id>/session.md`：
+- 先判断本研究是否需要跨会话沉淀或用户是否明确要求 session；只有结论为需要时，调用 `~/.claude/scripts/core/ensure-state.sh arch`。
+- 已创建 session 时，更新 `.claude/state/sessions/<id>/session.md`：
   - `current_phase`: SCOPE
   - `context.architecture_focus`

@@ -20,7 +20,7 @@ description: 当用户需要理解复杂项目、模块或数据流架构时触�
 
 ## 启动前必须执行
 
-在 SCOPE 阶段开始读写状态前：
+仅在架构研究需要跨会话沉淀，或用户明确要求记录 session 时，在 SCOPE 阶段开始读写状态前：
 
 1. 如果环境变量 `CLAUDE_SESSION_ID` 未设置，根据架构焦点生成会话 ID。**会话 ID 避免使用中文**：先将架构焦点提炼为英文（ASCII）短语，再传入脚本。
    ```bash
@@ -31,7 +31,7 @@ description: 当用户需要理解复杂项目、模块或数据流架构时触�
    ~/.claude/scripts/core/ensure-state.sh arch .claude/state "${SESSION_ID:-${CLAUDE_SESSION_ID:-default}}"
    ```
 
-该脚本会创建 `.claude/state/sessions/<id>/` 并确保 `session.md` 与 `architecture.md` 的 frontmatter 完整。派生的 SESSION_ID 必须写入 `session.md` 的 `context.session_id` 字段。
+单一问题的架构说明不创建 session，直接在回答或用户指定的文档中交付。创建 session 时，脚本会创建 `.claude/state/sessions/<id>/` 并确保 `session.md` 与 `architecture.md` 的 frontmatter 完整；派生的 SESSION_ID 必须写入 `session.md` 的 `context.session_id` 字段。
 
 ## 工作流循环
 
@@ -141,14 +141,14 @@ description: 当用户需要理解复杂项目、模块或数据流架构时触�
 
 ## 状态更新
 
-更新 `.claude/state/sessions/<id>/session.md`：
+已创建 session 时，更新 `.claude/state/sessions/<id>/session.md`：
 - `current_phase`: SCOPE | SURVEY | DRILL | CONNECT | MODEL
 - `context.architecture_focus`
 - `context.components`
 - `context.relationships`
 - `context.open_questions`
 
-用 `.claude/state/sessions/<id>/architecture.md` 维护运行中的架构模型。
+已创建 session 时，用 `.claude/state/sessions/<id>/architecture.md` 维护运行中的架构模型；否则直接交付模型。
 
 ## 危险信号
 
@@ -158,4 +158,4 @@ description: 当用户需要理解复杂项目、模块或数据流架构时触�
 - 跳过“开放问题”部分
 - 最终产物写成中性参考手册，没有观点、代码片段和具体例子
 - 只有概念描述，没有落地到代码行号或代码片段
-- 不先调用 `ensure-state.sh`
+- 已决定创建 session 却不先调用 `ensure-state.sh`

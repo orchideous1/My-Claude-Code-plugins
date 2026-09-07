@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# ensure-state.sh - 初始化并校验单会话状态目录与文件。
+# ensure-state.sh - 初始化并校验已获准创建的单会话状态目录。
 #
 # 用法：
 #   scripts/core/ensure-state.sh [workflow] [STATE_DIR] [SESSION_ID]
@@ -28,8 +28,6 @@ SESSION_DIR="$SESSIONS_DIR/$SESSION_ID"
 SESSION_FILE="$SESSION_DIR/session.md"
 PLAN_FILE="$SESSION_DIR/plan.md"
 ARCH_FILE="$SESSION_DIR/architecture.md"
-HANDOFF_FILE="$SESSION_DIR/handoff.md"
-
 mkdir -p "$SESSION_DIR"
 
 # 校验文件是否包含 YAML frontmatter 且包含指定字段
@@ -93,33 +91,31 @@ updated:
 EOF
 }
 
-write_handoff_template() {
-    cat > "$HANDOFF_FILE" <<'EOF'
----
----
-
-# 交接摘要
-
-EOF
-}
-
 # 1. session.md 必须存在且 frontmatter 完整
 if ! validate_frontmatter "$SESSION_FILE" "current_phase"; then
     write_session_template
 fi
 
-# 2. 确保各中间产物模板存在
-if [[ ! -f "$PLAN_FILE" ]]; then
-    write_plan_template
-fi
-
-if [[ ! -f "$ARCH_FILE" ]]; then
-    write_arch_template
-fi
-
-if [[ ! -f "$HANDOFF_FILE" ]]; then
-    write_handoff_template
-fi
+# 2. 仅创建 workflow 需要的中间产物。reference.md 仅在 summarize
+#    判定会话具有长期参考价值后生成，不能作为默认模板。
+case "$WORKFLOW" in
+    build)
+        if [[ ! -f "$PLAN_FILE" ]]; then
+            write_plan_template
+        fi
+        ;;
+    arch)
+        if [[ ! -f "$ARCH_FILE" ]]; then
+            write_arch_template
+        fi
+        ;;
+    read|general)
+        ;;
+    *)
+        echo "错误：未知 workflow：$WORKFLOW" >&2
+        exit 1
+        ;;
+esac
 
 # 更新 updated 字段（如果 frontmatter 中存在）
 if grep -q "^updated:" "$SESSION_FILE"; then

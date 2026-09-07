@@ -8,7 +8,7 @@
 - 问题已用一句话重述；
 - 入口点、预期行为、实际行为、涉及组件、可疑文件/模块、不在范围内的部分均已明确；
 - 可疑位置只列不读；
-- 范围已写入 `.claude/state/sessions/<id>/session.md` 的 `context.scope`。
+- 已创建 session 时，范围已写入 `.claude/state/sessions/<id>/session.md` 的 `context.scope`。
 
 ## 输出格式与操作
 
@@ -26,6 +26,5 @@
 - 不在范围内：
 
 **操作**：
-- 调用 `~/.claude/scripts/core/ensure-state.sh read` 初始化状态。
-- 将范围写入 `.claude/state/sessions/<id>/session.md` 的 `context.scope` 中。
-- 更新 `current_phase`: SCOPE。
+- 先判断本调查是否需要跨会话状态或用户是否明确要求 session；只有结论为需要时，调用 `~/.claude/scripts/core/ensure-state.sh read`。
+- 已创建 session 时，将范围写入 `.claude/state/sessions/<id>/session.md` 的 `context.scope` 中，并更新 `current_phase: SCOPE`。

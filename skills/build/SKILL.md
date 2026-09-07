@@ -18,7 +18,7 @@ description: 当用户需要生成新代码、重构或修改行为时触发
 
 ## 启动前必须执行
 
-在 UNDERSTANDING 阶段开始读写状态前：
+仅在任务需要跨会话状态，或用户明确要求记录 session 时，在 UNDERSTANDING 阶段开始读写状态前执行：
 
 1. 如果环境变量 `CLAUDE_SESSION_ID` 未设置，根据用户目标生成会话 ID。**会话 ID 避免使用中文**：先将用户目标提炼为英文（ASCII）短语，再传入脚本。
    ```bash
@@ -29,7 +29,7 @@ description: 当用户需要生成新代码、重构或修改行为时触发
    ~/.claude/scripts/core/ensure-state.sh build .claude/state "${SESSION_ID:-${CLAUDE_SESSION_ID:-default}}"
    ```
 
-该脚本会创建 `.claude/state/sessions/<id>/` 并确保 `session.md` 与 `plan.md` 的 frontmatter 完整。派生的 SESSION_ID 必须写入 `session.md` 的 `context.session_id` 字段。
+短小、可在当前回合完成的改动不创建 session，仍需完成理解、计划、实现和验证。创建 session 时，脚本会创建 `.claude/state/sessions/<id>/` 并确保 `session.md` 与 `plan.md` 的 frontmatter 完整；派生的 SESSION_ID 必须写入 `session.md` 的 `context.session_id` 字段。
 
 ## 工作流
 
@@ -113,7 +113,7 @@ description: 当用户需要生成新代码、重构或修改行为时触发
 
 ## 状态更新
 
-在 `.claude/state/sessions/<id>/session.md` 中跟踪进度：
+已创建 session 时，在 `.claude/state/sessions/<id>/session.md` 中跟踪进度：
 - `current_phase`: UNDERSTANDING | PLANNING | EXECUTING | VERIFYING | REFLECTING
 - `context.user_goal`
 - `context.plan`
@@ -122,12 +122,12 @@ description: 当用户需要生成新代码、重构或修改行为时触发
 - `context.verification_result`
 - `context.reflection`
 
-计划在 `.claude/state/sessions/<id>/plan.md` 中维护。
+已创建 session 时，计划在 `.claude/state/sessions/<id>/plan.md` 中维护；否则在用户确认的对话计划中维护。
 
 ## 危险信号
 
 - 计划未批准就写代码
 - 添加计划外功能
 - 跳过验证
-- 不更新状态文件
-- 不先调用 `ensure-state.sh`
+- 已创建 session 却不更新状态文件
+- 已决定创建 session 却不先调用 `ensure-state.sh`
