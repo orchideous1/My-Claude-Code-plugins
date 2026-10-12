@@ -42,8 +42,6 @@ class StateScriptTest(unittest.TestCase):
         expected = [
             ".claude/CLAUDE.md",
             "AGENTS.md",
-            ".kimi/AGENTS.md",
-            ".kimi-code/AGENTS.md",
             ".claude/state/development-governance.md",
             ".claude/state/git-workflow.md",
             ".claude/state/session-content-guide.md",
@@ -54,6 +52,13 @@ class StateScriptTest(unittest.TestCase):
         ]
         for relative in expected:
             self.assertTrue((self.project / relative).is_file(), relative)
+        for relative in (
+            ".claude/settings.json",
+            ".claude/skills",
+            ".kimi",
+            ".kimi-code",
+        ):
+            self.assertFalse((self.project / relative).exists(), relative)
         manifest = (self.project / ".claude/state/active-sessions.yaml").read_text(
             encoding="utf-8"
         )

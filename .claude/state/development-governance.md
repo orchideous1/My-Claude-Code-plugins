@@ -10,8 +10,9 @@ updated: 2026-10-12
 启动门禁和交付门禁。具体 Git 命令、会话内容职责和活跃会话事实分别下沉到对应 L2
 文档，不在本文重复。
 
-`AGENTS.md`、`.kimi/AGENTS.md` 和 `.kimi-code/AGENTS.md` 只是工具适配入口，必须
-转入 `.claude/CLAUDE.md`；它们不建立独立的治理层级或状态副本。
+根目录 `AGENTS.md` 是非 Claude 智能体的项目协作入口，必须转入
+`.claude/CLAUDE.md`；它不建立独立的治理层级或状态副本。用户级 skills、hooks 和
+运行时安装在 `~/.claude`、`~/.codex` 与 `~/.kimi-code`，不写入项目工具目录。
 
 # 文档层级
 

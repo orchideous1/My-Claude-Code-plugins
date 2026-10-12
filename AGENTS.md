@@ -10,7 +10,7 @@
 - 计划获批后再修改生产文件，只写当前会话拥有或共享的路径。
 - 同步维护测试、契约和 `session.md`；结束前记录验证结果、阻塞和下一步。
 - 根目录 `CLAUDE.md` 是插件实现说明，不是工作区状态文件。
-- `.codex`、`.kimi` 仅提供工具入口；不得复制 `.claude/state` 中的长期事实。
+- 用户级插件功能从 `~/.codex` 或 `~/.kimi-code` 加载；项目内不得复制运行时目录。
 
-插件的 Codex skills 由 `.codex-plugin/plugin.json` 暴露；会话治理以
+插件的 Codex manifest 位于 `.codex-plugin/plugin.json`；会话治理以
 `.claude/state/active-sessions.yaml` 为机器可读事实源。

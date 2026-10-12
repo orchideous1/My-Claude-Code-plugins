@@ -4,9 +4,6 @@ integration_branch: main
 
 governance_paths:
   - .claude/**
-  - .codex/**
-  - .kimi/**
-  - .kimi-code/**
   - .gitignore
   - AGENTS.md
   - CONTRIBUTING.md

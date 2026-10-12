@@ -26,9 +26,7 @@ INTEGRATION_BRANCH="${INTEGRATION_BRANCH:-main}"
 
 mkdir -p \
     "$PROJECT_ROOT/.claude/state/sessions" \
-    "$PROJECT_ROOT/.claude/state/archive" \
-    "$PROJECT_ROOT/.kimi" \
-    "$PROJECT_ROOT/.kimi-code"
+    "$PROJECT_ROOT/.claude/state/archive"
 
 render_template() {
     local template="$1"
@@ -84,10 +82,6 @@ fi
 append_claude_hierarchy "$CLAUDE_TARGET"
 render_missing "$TEMPLATE_DIR/AGENTS.md" \
     "$PROJECT_ROOT/AGENTS.md"
-render_missing "$TEMPLATE_DIR/KIMI_AGENTS.md" \
-    "$PROJECT_ROOT/.kimi/AGENTS.md"
-render_missing "$TEMPLATE_DIR/KIMI_AGENTS.md" \
-    "$PROJECT_ROOT/.kimi-code/AGENTS.md"
 render_missing "$TEMPLATE_DIR/development-governance.md" \
     "$PROJECT_ROOT/.claude/state/development-governance.md"
 render_missing "$TEMPLATE_DIR/git-workflow.md" \

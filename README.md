@@ -3,23 +3,23 @@
 面向 Claude Code 的分阶段开发与会话治理插件。仓库包含 `read`、`build`、`arch`、
 `summarize` 技能，以及用于 Git 会话绑定、状态文档保护和停止前一致性检查的 hooks。
 
-## 启用插件
+## 注册用户级运行时
 
-开发时可直接从本仓库加载：
+执行：
 
 ```bash
-claude --plugin-dir /home/linyiwu/My-Claude-Code-plugins
+python3 scripts/core/sync-user-runtimes.py
 ```
 
-hooks 在 Claude Code 会话启动时加载；修改 `hooks/hooks.json` 后必须重启会话。
-hook 使用 Python 3 和 PyYAML 读取 `active-sessions.yaml`。
+脚本将 skills、scripts、templates 和 hooks 注册到：
 
-Codex 使用 `.codex-plugin/plugin.json` 暴露同一组 skills，并从仓库根 `AGENTS.md`
-读取工作区协作约束。Kimi 使用 `.kimi/AGENTS.md`；`.kimi-code/AGENTS.md` 作为旧目录
-兼容入口。三类工具共用 `.claude/state/`，不得分别维护长期状态副本。
+- Claude：`~/.claude/`
+- Codex：`~/.codex/`
+- Kimi Code：`~/.kimi-code/`
 
-本源仓库自身还包含 `.claude/settings.json`，因此直接在仓库内使用 Claude Code 时会
-加载治理 hook；外部项目仍推荐通过插件方式加载。
+已有的 `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`、`~/.kimi-code/AGENTS.md` 和 JSON 配置不会
+整体覆盖。脚本只维护自己的标记区块与 `session-governance.py` hook 条目，重复执行
+保持幂等。修改源仓库运行时后重新执行同步脚本，并重启对应智能体会话。
 
 ## 初始化项目治理
 
@@ -35,7 +35,7 @@ Codex 使用 `.codex-plugin/plugin.json` 暴露同一组 skills，并从仓库�
 不会重复追加。它初始化 L0-L3 文档骨架：
 
 ```text
-AGENTS.md / .kimi/AGENTS.md  (工具适配入口)
+AGENTS.md  (非 Claude 智能体的项目协作入口)
 └─ .claude/CLAUDE.md
    └─ .claude/state/development-governance.md
       ├─ git-workflow.md
@@ -78,4 +78,5 @@ python3 -m unittest discover -s tests -v
 python3 -m py_compile hooks/session-governance.py
 bash -n scripts/core/*.sh hooks/summarize/*.sh
 jq empty .claude-plugin/plugin.json hooks/hooks.json
+python3 scripts/core/sync-user-runtimes.py --home /tmp/workflow-runtime-test
 ```

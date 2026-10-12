@@ -36,8 +36,6 @@ GLOBAL_LONG_TERM_DOCS = {
     ".claude/state/active-sessions.yaml",
     ".claude/state/goal-tracker.md",
     ".claude/state/architecture.md",
-    ".kimi/AGENTS.md",
-    ".kimi-code/AGENTS.md",
     "CONTRIBUTING.md",
 }
 SESSION_STATE_NAMES = {"session.md"}

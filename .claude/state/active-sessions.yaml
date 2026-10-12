@@ -6,8 +6,6 @@ governance_paths:
   - .claude/**
   - .claude-plugin/**
   - .codex-plugin/**
-  - .kimi/**
-  - .kimi-code/**
   - .gitignore
   - AGENTS.md
   - CLAUDE.md

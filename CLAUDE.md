@@ -22,7 +22,9 @@
 - 修改插件技能 / 脚本 / hook 的行为 → 仅更新本文件。
 - 记录工作区特定规则 → 仅更新该工作区的 `.claude/CLAUDE.md`，不同步回本文件。
 - 发现两边内容雷同时 → 按本分工原则重新归位，不双写。
-- 部署副本（如 `~/.claude/scripts/`、`~/.claude/skills/`、`~/.claude/hooks/`）通过 `rsync` 从本仓库同步，但 **`~/.claude/CLAUDE.md` 不从本文件同步**。
+- 用户级运行时通过 `scripts/core/sync-user-runtimes.py` 注册到 `~/.claude`、
+  `~/.codex` 和 `~/.kimi-code`。同步只维护带标记的注册区块，不覆盖全局 CLAUDE/AGENTS
+  原文或无关配置。
 
 ## 项目进展（goal-tracker简化版）
 
@@ -33,7 +35,7 @@
 | 2026-07-17 | 移除 .current-session-id 持久化机制：SESSION_ID 改为显式参数传递 |
 | 2026-07-18 | 修复 write-archive.sh 会话 ID 来源与摘要提取缺陷；确立 CLAUDE.md 职责分工 |
 | 2026-07-30 | 取消 archive/index.md：归档索引迁入本文件，状态模板规范化，输出文件收口 |
-| 2026-10-12 | 增加 Git 会话治理 harness：Claude/Codex manifest、分支/路径/阶段 hooks、非覆盖式项目初始化、重大会话分层模板和 Claude/Codex/Kimi 工作区入口 |
+| 2026-10-12 | 增加 Git 会话治理 harness：Claude/Codex manifest、分支/路径/阶段 hooks、非覆盖式项目初始化、重大会话分层模板和 Claude/Codex/Kimi Code 用户级注册 |
 
 > 具体进度详见 .claude/state/goal-tracker.md
 

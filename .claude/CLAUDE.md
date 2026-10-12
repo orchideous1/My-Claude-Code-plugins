@@ -22,7 +22,7 @@
 - 插件实现规范：`CLAUDE.md`
 
 工具专属目录只保存入口、配置或 skill 适配；长期项目事实统一维护在
-`.claude/state/`，不得在 `.codex/`、`.kimi/` 或其他目录建立平行副本。
+`.claude/state/`，不得在 `.codex/`、`.kimi-code/` 或其他目录建立平行副本。
 
 <!-- structured-governance:start -->
 ## 层级化开发治理

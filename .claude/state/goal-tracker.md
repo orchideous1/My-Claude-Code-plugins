@@ -10,7 +10,7 @@ updated: 2026-10-12
 ## 已完成目标
 
 - 建立 Git 会话治理 harness：增加分支/路径/阶段/批准门控、长期文档保护、非覆盖式
-  治理初始化、重大会话文档模板，以及 Claude、Codex、Kimi 的工作区协作入口
+  治理初始化、重大会话文档模板，以及 Claude、Codex、Kimi Code 的用户级运行时注册
   （2026-10-12）
 
 - 取消 `archive/index.md`：归档索引迁入项目 CLAUDE.md「已归档内容」区；状态模板规范化（goal-tracker_example / CLAUDE_example）；工作流输出文件收口（2026-07-30）
