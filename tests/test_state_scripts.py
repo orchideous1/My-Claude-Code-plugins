@@ -59,8 +59,31 @@ class StateScriptTest(unittest.TestCase):
         )
         self.assertIn("integration_branch: codex/integration", manifest)
 
+        claude_text = (self.project / ".claude/CLAUDE.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(claude_text.count("<!-- structured-governance:start -->"), 1)
+
+    def test_bootstrap_appends_to_existing_claude_without_replacing_it(self) -> None:
         claude_file = self.project / ".claude/CLAUDE.md"
-        claude_file.write_text("custom project rules\n", encoding="utf-8")
+        claude_file.parent.mkdir(parents=True)
+        original = "# Existing project rules\n\nKeep every original rule.\n"
+        claude_file.write_text(original, encoding="utf-8")
+
+        first = subprocess.run(
+            ["bash", str(BOOTSTRAP), str(self.project), "codex/integration"],
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        self.assertEqual(first.returncode, 0, first.stderr)
+        first_text = claude_file.read_text(encoding="utf-8")
+        self.assertTrue(first_text.startswith(original))
+        self.assertEqual(
+            first_text.count("<!-- structured-governance:start -->"), 1
+        )
+
         second = subprocess.run(
             ["bash", str(BOOTSTRAP), str(self.project), "codex/integration"],
             check=False,
@@ -69,9 +92,7 @@ class StateScriptTest(unittest.TestCase):
             stderr=subprocess.PIPE,
         )
         self.assertEqual(second.returncode, 0, second.stderr)
-        self.assertEqual(
-            claude_file.read_text(encoding="utf-8"), "custom project rules\n"
-        )
+        self.assertEqual(claude_file.read_text(encoding="utf-8"), first_text)
 
     def test_major_build_creates_layered_session_documents(self) -> None:
         state_dir = self.project / ".claude/state"

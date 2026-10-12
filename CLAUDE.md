@@ -175,7 +175,8 @@
 
 - `derive-session-id.sh <PHRASE>`：从用户目标/焦点短语生成短会话 ID slug（≤30 字符，保留中文与 ASCII）。
 - `bootstrap-governance.sh [PROJECT_ROOT] [INTEGRATION_BRANCH]`：只补缺、不覆盖地创建
-  L0-L3 治理文档骨架。
+  L0-L3 治理文档骨架；已有 `.claude/CLAUDE.md` 保留全文，只追加带标记且幂等的
+  层级化治理入口。
 - `ensure-state.sh [workflow] [STATE_DIR] [SESSION_ID] [PROFILE]`：`minimal` 创建最小
   会话状态；重大 build 的 `major` 额外创建 `algorithm.md`、`engineering.md`、
   `data-dict.md`。已有文件 frontmatter 异常时失败，禁止自动覆盖恢复。

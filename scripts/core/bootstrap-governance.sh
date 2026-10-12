@@ -5,7 +5,8 @@
 # 用法：
 #   scripts/core/bootstrap-governance.sh [PROJECT_ROOT] [INTEGRATION_BRANCH]
 #
-# 只创建缺失文件；已有 CLAUDE.md、治理文档和状态文件绝不会被覆盖。
+# 只创建缺失文件；已有治理文档和状态文件绝不会被覆盖。已有工作区
+# `.claude/CLAUDE.md` 仅追加带标记的层级化治理入口，原内容保持不变。
 
 set -euo pipefail
 
@@ -29,6 +30,14 @@ mkdir -p \
     "$PROJECT_ROOT/.kimi" \
     "$PROJECT_ROOT/.kimi-code"
 
+render_template() {
+    local template="$1"
+    sed \
+        -e "s/YYYY-MM-DD/$DATE/g" \
+        -e "s|^integration_branch: .*|integration_branch: $INTEGRATION_BRANCH|" \
+        "$template"
+}
+
 render_missing() {
     local template="$1"
     local target="$2"
@@ -40,15 +49,39 @@ render_missing() {
         echo "错误：初始化模板不存在：$template" >&2
         return 1
     fi
-    sed \
-        -e "s/YYYY-MM-DD/$DATE/g" \
-        -e "s|^integration_branch: .*|integration_branch: $INTEGRATION_BRANCH|" \
-        "$template" > "$target"
+    render_template "$template" > "$target"
     echo "已创建：${target#$PROJECT_ROOT/}"
 }
 
-render_missing "$TEMPLATE_DIR/CLAUDE_example.md" \
-    "$PROJECT_ROOT/.claude/CLAUDE.md"
+append_claude_hierarchy() {
+    local target="$1"
+    local fragment="$TEMPLATE_DIR/CLAUDE_hierarchy.md"
+    local marker="<!-- structured-governance:start -->"
+
+    if [[ ! -f "$fragment" ]]; then
+        echo "错误：层级化入口模板不存在：$fragment" >&2
+        return 1
+    fi
+    if grep -Fq "$marker" "$target"; then
+        echo "保留已有层级化入口：${target#$PROJECT_ROOT/}"
+        return 0
+    fi
+
+    if [[ -s "$target" ]]; then
+        if [[ -n "$(tail -c 1 "$target")" ]]; then
+            printf '\n' >> "$target"
+        fi
+        printf '\n' >> "$target"
+    fi
+    render_template "$fragment" >> "$target"
+    echo "已补充层级化入口：${target#$PROJECT_ROOT/}"
+}
+
+CLAUDE_TARGET="$PROJECT_ROOT/.claude/CLAUDE.md"
+if [[ ! -e "$CLAUDE_TARGET" ]]; then
+    render_missing "$TEMPLATE_DIR/CLAUDE_example.md" "$CLAUDE_TARGET"
+fi
+append_claude_hierarchy "$CLAUDE_TARGET"
 render_missing "$TEMPLATE_DIR/AGENTS.md" \
     "$PROJECT_ROOT/AGENTS.md"
 render_missing "$TEMPLATE_DIR/KIMI_AGENTS.md" \

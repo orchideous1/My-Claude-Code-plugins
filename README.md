@@ -30,7 +30,9 @@ Codex 使用 `.codex-plugin/plugin.json` 暴露同一组 skills，并从仓库�
   . codex/integration
 ```
 
-脚本只创建缺失文件，不覆盖已有项目文档。它初始化 L0-L3 文档骨架：
+脚本只创建缺失文件，不覆盖已有项目文档。若 `.claude/CLAUDE.md` 已存在，只会在
+文件末尾追加带 `structured-governance` 标记的层级化入口；原内容保持不变，重复运行
+不会重复追加。它初始化 L0-L3 文档骨架：
 
 ```text
 AGENTS.md / .kimi/AGENTS.md  (工具适配入口)
