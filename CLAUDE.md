@@ -12,7 +12,7 @@
 本仓库（插件源仓库）的 CLAUDE.md 与使用本插件的工作区仓库的 CLAUDE.md 承担不同职责，**不应互相复制内容**：
 
 1. **源仓库 CLAUDE.md**（本文件）：专注插件技能体系的理解——工作流定义、状态架构、脚本接口、skill 边界、归档规则。面向**维护插件本身**的协作者。
-2. **工作区 CLAUDE.md**（使用插件的项目目录下的 CLAUDE.md）：记录该工作区特有的协作规则——项目结构、构建命令、测试约定、领域约束、目标追踪入口。面向**在该工作区中使用插件**的协作者。
+2. **工作区 `.claude/CLAUDE.md`**：只记录该工作区的简洁协作入口——阅读顺序、事实源、构建/测试约定和必要领域约束。面向**在该工作区中使用插件**的协作者，不复制插件实现细节。
 3. **全局 `~/.claude/CLAUDE.md`**：仅记录跨项目通用的协作偏好（如默认语言、工作流触发场景），不复述插件内部实现细节。
 
 背景：2026-07-16 迁移 summarize 机制时未注意此边界，导致源仓库 CLAUDE.md 与 `~/.claude/CLAUDE.md` 内容几乎一致，任何规则修改都需双写且职责不清。
@@ -20,7 +20,7 @@
 应用：
 
 - 修改插件技能 / 脚本 / hook 的行为 → 仅更新本文件。
-- 记录工作区特定规则 → 仅更新该工作区的 CLAUDE.md，不同步回本文件。
+- 记录工作区特定规则 → 仅更新该工作区的 `.claude/CLAUDE.md`，不同步回本文件。
 - 发现两边内容雷同时 → 按本分工原则重新归位，不双写。
 - 部署副本（如 `~/.claude/scripts/`、`~/.claude/skills/`、`~/.claude/hooks/`）通过 `rsync` 从本仓库同步，但 **`~/.claude/CLAUDE.md` 不从本文件同步**。
 
@@ -33,6 +33,7 @@
 | 2026-07-17 | 移除 .current-session-id 持久化机制：SESSION_ID 改为显式参数传递 |
 | 2026-07-18 | 修复 write-archive.sh 会话 ID 来源与摘要提取缺陷；确立 CLAUDE.md 职责分工 |
 | 2026-07-30 | 取消 archive/index.md：归档索引迁入本文件，状态模板规范化，输出文件收口 |
+| 2026-10-12 | 增加 Git 会话治理 harness：Claude/Codex manifest、分支/路径/阶段 hooks、非覆盖式项目初始化、重大会话分层模板和 Claude/Codex/Kimi 工作区入口 |
 
 > 具体进度详见 .claude/state/goal-tracker.md
 
@@ -88,7 +89,10 @@
 
 使用 `build` 技能。
 
-仅需跨会话状态或用户明确要求 session 时，若 `CLAUDE_SESSION_ID` 未设置，使用 `scripts/core/derive-session-id.sh` 从用户目标生成会话 ID，并调用 `scripts/core/ensure-state.sh build .claude/state [SESSION_ID]` 初始化状态。
+仅需跨会话状态或用户明确要求 session 时，先读取 `active-sessions.yaml` 并进入登记的
+会话分支。新会话在集成分支登记后，调用
+`scripts/core/ensure-state.sh build .claude/state [SESSION_ID] [minimal|major]` 初始化状态；
+重大任务使用 `major` 创建算法、工程和数据字典三层文档。
 
 阶段：
 1. **UNDERSTANDING（理解）** — 澄清意图、约束、成功标准
@@ -139,7 +143,8 @@
 
 1. 每个工作流阶段结束后更新 `.claude/state/sessions/<id>/session.md`。
 2. 每个 `build` 任务必须维护 `.claude/state/sessions/<id>/plan.md`。
-3. 长期目标维护在 `.claude/state/goal-tracker.md`。
+3. 会话内先记录长期目标更新提案；启用 active-session 治理时在 integration 分支
+   收敛到 `.claude/state/goal-tracker.md`。
 4. `arch` 产物写入 `.claude/state/sessions/<id>/architecture.md`。
 5. 会话结束时触发 `summarize` 技能进行回顾、目标对齐、回答质量评估、归档方案确认与归档执行，归档完成后进入 AUDIT 审查；`CLAUDE.md` 优化建议仅输出，不得自动写入。
 6. 实现完成后向用户汇报，并在代码开头写 docstring。
@@ -157,7 +162,10 @@
 - `read`：REPORT → FIX 必须获得用户批准
 - `build`：PLANNING → EXECUTING 必须获得用户批准
 - `arch`：MODEL 后必须自审，有缺口则回退
-- `summarize`：REVIEW → ALIGN → EVALUATE → PACKAGE → ARCHIVE → AUDIT；PACKAGE 生成归档内容方案并提前询问用户是否归档，用户确认后调用归档 hook 写入 archive、清理原会话目录，并将归档条目追加到本文件「已归档内容」区，随后进入 AUDIT；AUDIT 结果只向用户展示，不写入文件，也不进入 archive；用户不确认则不归档。
+- `summarize`：REVIEW → ALIGN → EVALUATE → PACKAGE → ARCHIVE → AUDIT；PACKAGE 只在
+  存在可复用长期知识时生成 `reference.md` 并询问用户是否归档，用户确认后调用归档
+  hook 写入 archive 并清理原会话目录；启用 active-session 治理时，全局索引在
+  integration 分支收敛。AUDIT 结果只展示，不写入文件。
 
 ### 状态脚本
 
@@ -166,10 +174,16 @@
 **通用约定**：所有 `scripts/core/*.sh` 调用必须显式传 SESSION_ID 参数或 `CLAUDE_SESSION_ID` 环境变量；脚本不再读共享文件。
 
 - `derive-session-id.sh <PHRASE>`：从用户目标/焦点短语生成短会话 ID slug（≤30 字符，保留中文与 ASCII）。
-- `ensure-state.sh [workflow] [STATE_DIR] [SESSION_ID]`：初始化/校验 `.claude/state/sessions/<id>/` 及 `session.md`、`plan.md`、`architecture.md`、`handoff.md`。SESSION_ID 由调用方显式传入或取自 `CLAUDE_SESSION_ID` 环境变量，不再落盘到共享文件。
+- `bootstrap-governance.sh [PROJECT_ROOT] [INTEGRATION_BRANCH]`：只补缺、不覆盖地创建
+  L0-L3 治理文档骨架。
+- `ensure-state.sh [workflow] [STATE_DIR] [SESSION_ID] [PROFILE]`：`minimal` 创建最小
+  会话状态；重大 build 的 `major` 额外创建 `algorithm.md`、`engineering.md`、
+  `data-dict.md`。已有文件 frontmatter 异常时失败，禁止自动覆盖恢复。
 - `infer-workflow.sh [<SESSION_FILE>]`：从 `session.md` 推断 workflow 类型；未提供文件时根据 `CLAUDE_SESSION_ID`（或 `default`）构造路径。
 - `reset-session.sh [<SESSION_FILE>]`：将 `session.md` 重置为 IDLE 模板。
-- `write-archive.sh <SOURCE_FILE> <DESCRIPTION> [WORKFLOW_TYPE] [STATE_DIR]`：将已确认的 guide 复制到 `archive/` 并按类型命名；不维护 `archive/index.md`，归档索引由 `summarize` 写入项目级 `CLAUDE.md` 的「已归档内容」区。
+- `write-archive.sh <SOURCE_FILE> <DESCRIPTION> [STATE_DIR]`：只接受带
+  `type: reference` frontmatter 的 `sessions/<id>/reference.md`，复制为
+  `archive/<timestamp>-<desc>-reference.md`；不维护 `archive/index.md`。
 - `cleanup-session.sh [STATE_DIR] [SESSION_ID]`：归档后删除原 `sessions/<id>/` 目录。SESSION_ID 由调用方显式传入；`hooks/summarize/archive.sh` 会从 `SOURCE_FILE` 路径推断并显式传递。
 
 ### 归档 hooks
@@ -184,18 +198,27 @@
   - 补全当前会话状态：仅在 `CLAUDE_SESSION_ID` 显式设置或会话目录已存在时调用 `ensure-state.sh`，避免凭空创建 `sessions/default/` 残留目录
   - 异常时阻断
 - `archive.sh`：在用户确认归档后执行归档。负责：
-  - 接收已确认的 guide 来源文件、归档描述、workflow 类型
-  - 调用 `scripts/core/write-archive.sh` 将 guide 复制到归档目录
+  - 接收已确认的 `reference.md` 来源文件和归档描述
+  - 调用 `scripts/core/write-archive.sh` 将 reference 复制到归档目录
   - 调用 `scripts/core/cleanup-session.sh` 删除原 `sessions/<id>/` 目录
-  - 按 workflow 类型迁移 guide 到归档目录：
-    - build：`handoff.md` → `archive/<timestamp>-<desc>-build-handoff.md`
-    - read：`handoff.md` → `archive/<timestamp>-<desc>-read-report.md`
-    - arch：`architecture.md` → `archive/<timestamp>-<desc>-arch-model.md`
-    - general：`handoff.md` → `archive/<timestamp>-<desc>-general-summary.md`
-  - **只归档 guide，`session.md` 与 `plan.md` 等中间状态不归档**，归档后随 `sessions/<id>/` 一起删除
+  - **只归档 reference，`session.md`、`plan.md` 和领域草稿不归档**，归档后随
+    `sessions/<id>/` 一起删除
 - `session-exit.sh`：会话退出前检测当前会话未归档的 dirty 状态，提示用户是否需要触发 `summarize`。
 
 这些 hooks 存放在本项目的 `hooks/summarize/` 目录下，使用时需在 Claude Code 配置中按需挂载。
+
+### 会话治理 hooks
+
+`hooks/hooks.json` 会在插件启用后自动注册 `hooks/session-governance.py`：
+
+- `SessionStart` / `PreCompact`：从 Git 分支和 `active-sessions.yaml` 固定当前 session。
+- `PreToolUse`：执行会话、路径、阶段和批准门控，保护长期文档不被整文件覆盖或大段删除。
+- `PostToolUse`：验证 frontmatter 与必填状态字段。
+- `Stop`：检测跨会话污染、全局文档越界、未同步 `session.md` 和项目声明的
+  `document_rules`。
+- `SessionEnd`：提示把 dirty 工作树收敛为可运行检查点。
+
+治理 hook 仅在工作区存在 `.claude/state/active-sessions.yaml` 时启用。PyYAML 是运行依赖。
 
 为避免上下文冗余，本系统采用以下分工：
 
@@ -224,37 +247,27 @@
 
 | 类型 | 位置 | 代表文件 | 说明 |
 |------|------|----------|------|
-| 中间状态 | `.claude/state/sessions/<id>/` | `session.md`、`plan.md`、待归档的 `handoff.md` / `architecture.md` | 单会话工作草稿，会话结束后重置 |
-| 归档产物 | `.claude/state/archive/` | `<timestamp>-<desc>-<type>-<artifact>.md` | 经审查的 guide 快照，保留足够过程信息 |
+| 中间状态 | `.claude/state/sessions/<id>/` | `session.md`、`plan.md`、算法/工程/数据文档；筛选通过时临时生成 `reference.md` | 单会话工作状态 |
+| 归档产物 | `.claude/state/archive/` | `<timestamp>-<desc>-reference.md` | 经审查的长期参考 |
 | 长期记忆 | `.claude/state/` 根目录 + `CLAUDE.md` | `goal-tracker.md`、`CLAUDE.md`（含「已归档内容」索引区） | 跨会话共享，协作规则与目标 |
 
 ### 归档索引
 
-不再维护 `.claude/state/archive/index.md`。归档索引记录在项目级 `CLAUDE.md` 的「已归档内容」区，由 `summarize` 在 ARCHIVE 阶段按用户已确认的归档方案追加条目，格式：`- <归档文件名> — <一句话摘要>`。新会话开始时应优先阅读本索引以了解历史进展与关键 handoff。
+不再维护 `.claude/state/archive/index.md`。未启用 active-session 治理的项目，可按用户
+确认方案更新项目级 `CLAUDE.md` 的归档索引；启用治理时，在 integration 分支统一
+收敛索引。
 
-### 工作流感知的归档命名
+### 归档 reference 内容标准
 
-| workflow | 来源文件 | 归档文件名 |
-|----------|----------|------------|
-| build | `sessions/<id>/handoff.md` | `<timestamp>-<desc>-build-handoff.md` |
-| read | `sessions/<id>/handoff.md` | `<timestamp>-<desc>-read-report.md` |
-| arch | `sessions/<id>/architecture.md` | `<timestamp>-<desc>-arch-model.md` |
-| general | `sessions/<id>/handoff.md` | `<timestamp>-<desc>-general-summary.md` |
-
-### 归档 guide 内容标准
-
-归档产物是 guide，不是 `session.md` 的原始轨迹。guide 必须保留足够的过程信息，避免过度简化，使新会话能继续推进：
-
-- **build handoff**：目标与约束、方案摘要与关键决策、文件清单与接口变更、验证结果、待办与风险。
-- **read report**：问题与范围、假设及证实/证伪证据、被排除假设的理由、根因、修复计划、风险。
-- **arch model**：焦点与价值、高层结构、组件职责与代码片段、数据/控制流、关键决策与开放问题。
-- **general summary**：核心成果、关键决策、待办、下次入口与风险。
+`reference.md` 只保留未来会直接复用、且尚未被现行代码或权威文档覆盖的稳定事实：
+适用范围、接口或数据布局、代码/配置位置、重建条件、运维风险和必要待办。过程日志、
+历史测试数量、一次性统计和过时计划不得归档。
 
 ### 归档审查
 
 归档完成后，进入 AUDIT 阶段。AUDIT 必须通过**独立 sub-agent** 执行，与主代理的回顾/对齐/评估上下文解耦。sub-agent 仅可见以下材料：
 
-- 本次会话的 `session.md`、`plan.md`、guide 文件（如已归档则使用 archive 副本）
+- 本次会话的 `session.md`、`plan.md`、`reference.md`（如已归档则使用 archive 副本）
 - 本次会话涉及的代码变更（`git diff`）
 - 项目级 `CLAUDE.md`
 
@@ -264,7 +277,7 @@ sub-agent 的审查范围：
 - 文档冲突（`CLAUDE.md`、skill、模板之间是否一致）
 - 状态架构（文件位置、frontmatter、分层边界）
 - `CLAUDE.md` 优化（仅输出建议，**不得自动写入**）
-- 归档内容审查（guide 是否准确、完整、命名是否符合规则）
+- 归档内容审查（reference 是否准确、可复用、无过程噪声且命名符合规则）
 
 AUDIT 结果按「阻塞 / 建议 / 通过」分类，只向用户展示，不写入文件，也不进入 archive。如发现目标偏差或架构理解问题，sub-agent 可向用户提出重新对齐的问题。
 

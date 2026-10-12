@@ -1,7 +1,7 @@
 ---
 name: goal-tracker
 description: 长期目标追踪
-updated:
+updated: YYYY-MM-DD
 ---
 
 # 目标追踪

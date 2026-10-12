@@ -97,6 +97,7 @@ description: 当用户需要排查 bug、理解代码行为或调查意外行为
 
 **→ REPORT → FIX 门控**：
 - 必须获得用户明确批准（如“批准修复”）
+- 已创建 session 时，将 `context.fix_approved` 设为 `true` 并把阶段切换为 `FIX`
 - 在批准前，任何对生产代码的 Write/Edit 都被 hook 拦截
 
 使用提示模板：`~/.claude/prompt-templates/reading/phase4-report.md`

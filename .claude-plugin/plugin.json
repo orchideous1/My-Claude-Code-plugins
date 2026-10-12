@@ -1,0 +1,16 @@
+{
+  "name": "structured-development-workflows",
+  "version": "0.2.0",
+  "description": "Structured read, build, architecture, summary, and session-governance workflows for Claude Code.",
+  "author": {
+    "name": "orchideous1"
+  },
+  "repository": "https://github.com/orchideous1/My-Claude-Code-plugins",
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "session-state",
+    "governance",
+    "documentation"
+  ]
+}

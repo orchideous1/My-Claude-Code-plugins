@@ -99,7 +99,8 @@ description: 当会话结束、切换任务或需要总结归档时触发
         .claude/state
    ```
 3. 归档成功后，调用 `cleanup-session.sh` 删除原 `sessions/<id>/` 目录（使用 hook 入口时由 hook 一并完成）。
-4. 将归档条目追加到项目级 `CLAUDE.md` 的「已归档内容」区，格式：`- <归档文件名> — <一句话摘要>`。条目内容来自 PACKAGE 阶段用户已确认的归档方案，不视为未受控的 CLAUDE.md 变更。
+4. 将归档索引更新作为待收敛变更；若项目启用了 active-session 治理，只能在
+   integration 分支更新项目级 `CLAUDE.md`，不得从会话分支直接修改全局长期文档。
 5. 向用户总结归档内容：文件名、位置、摘要。
 
 使用提示模板：`prompt-templates/summarize/archive.md`
@@ -156,7 +157,8 @@ sub-agent 的任务：
 ### 长期记忆（跨会话）
 
 - `.claude/state/goal-tracker.md`：目标追踪
-- `CLAUDE.md`：项目协作规则与归档索引（「已归档内容」区），**所有增改必须经用户审核**（归档索引追加除外——属 PACKAGE 已确认方案的一部分）
+- `CLAUDE.md`：项目协作规则与归档索引；所有增改必须经用户审核，启用
+  active-session 治理时还必须在 integration 分支收敛
 - 记忆文件：用户偏好、反馈、项目背景
 
 ## 归档约定
@@ -175,7 +177,7 @@ sub-agent 的任务：
 ## 输出产物
 
 - `.claude/state/archive/<timestamp>-<desc>-reference.md`：归档参考文档
-- 项目级 `CLAUDE.md`：「已归档内容」区追加的归档条目
+- 项目级归档索引更新提案；启用 active-session 治理时在 integration 分支落盘
 - `.claude/state/goal-tracker.md`：同步目标状态
 - 归档成功后，原 `sessions/<id>/` 目录被删除
 

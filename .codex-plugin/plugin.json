@@ -1,0 +1,34 @@
+{
+  "name": "structured-development-workflows",
+  "version": "0.2.0",
+  "description": "Structured development skills and Git-backed session governance for coding agents.",
+  "author": {
+    "name": "orchideous1"
+  },
+  "repository": "https://github.com/orchideous1/My-Claude-Code-plugins",
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "session-state",
+    "governance",
+    "documentation"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Structured Development Workflows",
+    "shortDescription": "Git-backed planning and session governance",
+    "longDescription": "Structured read, build, architecture, summary, and session-state workflows for coding agents.",
+    "developerName": "orchideous1",
+    "category": "Productivity",
+    "capabilities": [
+      "Planning",
+      "Documentation",
+      "Governance"
+    ],
+    "defaultPrompt": [
+      "Start a governed build session for this task.",
+      "Audit the current session state and Git ownership.",
+      "Summarize and close the active development session."
+    ]
+  }
+}

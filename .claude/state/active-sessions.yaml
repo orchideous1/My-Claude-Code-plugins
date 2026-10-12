@@ -1,0 +1,18 @@
+schema_version: 1
+updated: 2026-10-12
+integration_branch: main
+
+governance_paths:
+  - .claude/**
+  - .claude-plugin/**
+  - .codex-plugin/**
+  - .kimi/**
+  - .kimi-code/**
+  - .gitignore
+  - AGENTS.md
+  - CLAUDE.md
+  - CONTRIBUTING.md
+  - Makefile
+  - README.md
+
+sessions: []

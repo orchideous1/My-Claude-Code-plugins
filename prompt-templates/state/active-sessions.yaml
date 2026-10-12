@@ -1,0 +1,15 @@
+schema_version: 1
+updated: YYYY-MM-DD
+integration_branch: main
+
+governance_paths:
+  - .claude/**
+  - .codex/**
+  - .kimi/**
+  - .kimi-code/**
+  - .gitignore
+  - AGENTS.md
+  - CONTRIBUTING.md
+  - Makefile
+
+sessions: []

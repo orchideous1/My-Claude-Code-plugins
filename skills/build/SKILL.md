@@ -20,13 +20,17 @@ description: 当用户需要生成新代码、重构或修改行为时触发
 
 仅在任务需要跨会话状态，或用户明确要求记录 session 时，在 UNDERSTANDING 阶段开始读写状态前执行：
 
-1. 如果环境变量 `CLAUDE_SESSION_ID` 未设置，根据用户目标生成会话 ID。**会话 ID 避免使用中文**：先将用户目标提炼为英文（ASCII）短语，再传入脚本。
+1. 若项目存在 `.claude/state/active-sessions.yaml`，先从当前 Git 分支找到已登记会话；
+   未登记时回到 integration 注册会话，不得临时借用其他会话目录。
+2. 无 active-session 治理的项目，如果环境变量 `CLAUDE_SESSION_ID` 未设置，根据用户目标生成会话 ID。**会话 ID 避免使用中文**：先将用户目标提炼为英文（ASCII）短语，再传入脚本。
    ```bash
    SESSION_ID=$(~/.claude/scripts/core/derive-session-id.sh "{{USER_GOAL}}")
    ```
-2. 调用 `ensure-state.sh` 初始化状态：
+3. 调用 `ensure-state.sh` 初始化状态。普通任务使用 `minimal`；跨模块、改变 schema、
+   状态归属、持久化或主控制流的 substantial 修改使用 `major`：
    ```bash
-   ~/.claude/scripts/core/ensure-state.sh build .claude/state "${SESSION_ID:-${CLAUDE_SESSION_ID:-default}}"
+   ~/.claude/scripts/core/ensure-state.sh build .claude/state "${SESSION_ID:-${CLAUDE_SESSION_ID:-default}}" minimal
+   # substantial 修改：将最后一个参数改为 major
    ```
 
 短小、可在当前回合完成的改动不创建 session，仍需完成理解、计划、实现和验证。创建 session 时，脚本会创建 `.claude/state/sessions/<id>/` 并确保 `session.md` 与 `plan.md` 的 frontmatter 完整；派生的 SESSION_ID 必须写入 `session.md` 的 `context.session_id` 字段。
@@ -133,7 +137,7 @@ description: 当用户需要生成新代码、重构或修改行为时触发
 
 1. 总结变更内容
 2. 更新相关文档
-3. 更新 `.claude/state/goal-tracker.md`
+3. 在会话文档中提出项目级目标更新；全局 `goal-tracker.md` 在 integration 收敛
 4. 记录实际保留、新增、内联、下沉或删除的抽象，并逐项对照计划中的必要性表
 5. 记录实际接口 / schema、状态归属、流程图与批准计划的偏差、偏差原因及用户是否重新批准；无偏差也要明确记录
 6. 决定：完成、还是下一轮？

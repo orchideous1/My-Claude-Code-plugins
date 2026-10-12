@@ -2,13 +2,14 @@
 
 本提示用于 `summarize` 工作流 **AUDIT** 阶段的独立 sub-agent。
 
-主代理已完成 REVIEW → ALIGN → EVALUATE → PACKAGE → ARCHIVE，并已将 guide 归档。AUDIT 与前面的回顾/对齐/评估在上下文上解耦：sub-agent 不应依赖主代理的对话历史，只能基于下面列出的材料进行审查。
+主代理已完成 REVIEW → ALIGN → EVALUATE → PACKAGE → ARCHIVE，并在需要时将
+`reference.md` 归档。AUDIT 与前面的回顾/对齐/评估在上下文上解耦。
 
 ## sub-agent 可见材料
 
 sub-agent 只能看到以下材料，不得向主代理索要额外上下文：
 
-1. 本次会话的 `session.md`、`plan.md`、guide 文件（`handoff.md` 或 `architecture.md`，如已归档则使用 archive 中的副本）。
+1. 本次会话的 `session.md`、`plan.md`、`reference.md`（如已归档则使用 archive 副本）。
 2. 本次会话涉及的代码变更（`git diff`）。
 3. 项目级 `CLAUDE.md`。
 
@@ -44,10 +45,10 @@ sub-agent 只能看到以下材料，不得向主代理索要额外上下文：
 
 ### 5. 归档内容审查
 
-- 本次会话是否产生了值得归档的 guide？
-- `handoff.md` / `architecture.md` 内容是否准确、完整、无敏感信息？
+- 本次会话是否产生了值得归档的长期 reference？
+- `reference.md` 是否准确、可复用、无敏感信息和过程噪声？
 - 根据 workflow 类型，归档文件名是否符合命名规则？
-- guide 是否过度简化？是否保留了足够的过程信息供新会话接手？
+- reference 是否说明适用范围、事实来源、风险与重建条件？
 
 ## 输出格式
 
@@ -72,7 +73,7 @@ sub-agent 只能看到以下材料，不得向主代理索要额外上下文：
 
 ## 约束
 
-- **不得写入任何文件**，包括 `CLAUDE.md`、状态文件、guide 文件或 archive。
+- **不得写入任何文件**，包括 `CLAUDE.md`、状态文件、reference 或 archive。
 - **不得修改主代理或项目代码**。
 - 如认为主代理存在目标偏差，可在「阻塞」中提出重新对齐的问题，由主代理向用户转达。
 - 审查结果只返回到当前对话，由主代理向用户展示。
